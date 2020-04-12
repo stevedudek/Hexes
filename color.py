@@ -28,7 +28,7 @@ def _float_to_byte_triple(triple):
 
     
 def _byte_to_float(b):
-    """Convert a [0-255] byte to a [0.0-1.0] float"""
+    """Convert a [0-255] byte to a [0.0 - 1.0] float"""
     return (int(b) % 256) / 255.0
 
 
