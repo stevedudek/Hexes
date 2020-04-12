@@ -1,2 +1,2 @@
 # Hexes
-LED Lighting code for 1-3 large Hexagonal displays
+Four LEDs square of 144 LEDs each
