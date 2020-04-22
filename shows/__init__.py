@@ -38,12 +38,13 @@ def load_shows(path=None):
                         ctor = getattr(mod, name)
                         _shows.append( (name, ctor) )
 
-        except Exception, e:
-            print "exception loading module from %s, skipping" % m
+        except Exception as e:
+            print("exception loading module from {}, skipping".format(m))
             import traceback
             traceback.print_exc()
     # sort show tuples by name before returning them
     return sorted(_shows, key=itemgetter(0))
+
 
 def random_shows(path=None, norepeat=None):
     """

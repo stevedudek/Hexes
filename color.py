@@ -56,12 +56,17 @@ def hue_to_color(hue):
 
 def black():
     """Return black color"""
-    return (0, 255, 0)
+    return 255, 255, 0
+
+
+def almost_black():
+    """Return black color"""
+    return 254, 255, 0
 
 
 def white():
-    """Return black color"""
-    return (0, 0, 255)
+    """Return white color"""
+    return 0, 0, 255
 
 
 def random_color(reds=False):
@@ -94,6 +99,33 @@ def change_color(hsv, amount):
     return (hsv[0] + _float_to_byte(amount)), hsv[1], hsv[2]
 
 
+def interp_color(hsv1, hsv2, fraction):
+    """Interpolate between hsv1 and hsv2"""
+    if fraction <= 0:
+        return hsv1
+    elif fraction >= 1:
+        return hsv2
+    elif not are_different(hsv1, hsv2):
+        return hsv1
+    elif hsv1[2] == 0:  # 1 is black, so dim 2
+        return dim_color(hsv2, fraction)
+    elif hsv2[2] == 0:  # 2 is black, so dim 1
+        return dim_color(hsv1, 1 - fraction)
+    else:
+        return interp_value(hsv1[0], hsv2[0], fraction), \
+               interp_value(hsv1[1], hsv2[1], fraction), \
+               interp_value(hsv1[2], hsv2[2], fraction),
+
+
+def interp_value(v1, v2, fraction):
+    return v1 + (fraction * (v2 - v1))
+
+
+def are_different(color1, color2):
+    """Are the two colors different?"""
+    return color_to_int(color1[0], color1[1], color1[2]) != color_to_int(color2[0], color2[1], color2[2])
+
+
 def restrict_color(hsv, hue, hue_range=0.05):
     """restrict a color with 0-1.0 starting hue to hue +/- range. Use this to set reds, blues, etc."""
 
@@ -114,8 +146,23 @@ def restrict_color(hsv, hue, hue_range=0.05):
 
 def dim_color(hsv, amount):
     """dim an hsv color by a 0-1.0 range"""
+    dim_amount = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
+                  1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8,
+                  8, 8, 9, 9, 9, 10, 10, 11, 11, 12, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17,
+                  17, 18, 18, 19, 19, 20, 21, 21, 22, 22, 23, 24, 24, 25, 25, 26, 27, 27, 28, 29,
+                  29, 30, 31, 31, 32, 33, 34, 34, 35, 36, 37, 37, 38, 39, 40, 41, 41, 42, 43, 44,
+                  45, 45, 46, 47, 48, 49, 50, 51, 52, 53, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62,
+                  63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 76, 77, 78, 79, 80, 81, 82, 83,
+                  84, 86, 87, 88, 89, 90, 92, 93, 94, 95, 96, 98, 99, 100, 101, 103, 104, 105, 106,
+                  108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 123, 124, 125, 127, 128,
+                  130, 131, 132, 134, 135, 137, 138, 140, 141, 143, 144, 146, 147, 149, 150, 152,
+                  153, 155, 157, 158, 160, 161, 163, 164, 166, 168, 169, 171, 173, 174, 176, 178,
+                  179, 181, 183, 184, 186, 188, 189, 191, 193, 195, 196, 198, 200, 202, 203, 205,
+                  207, 209, 211, 212, 214, 216, 218, 220, 222, 224, 225, 227, 229, 231, 233, 235,
+                  237, 239, 241, 243, 245, 247, 249, 251, 253, 255]
+
     amount = max([min([amount, 1]), 0])
-    return hsv[0], hsv[1], int(hsv[2] * amount)
+    return hsv[0], hsv[1], dim_amount[int(hsv[2] * amount)]
 
 
 def color_to_int(h, s, v):

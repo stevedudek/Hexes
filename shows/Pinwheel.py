@@ -33,7 +33,7 @@ class Pinwheel(object):
 
 class Pinwheels(object):
     def __init__(self, hexmodel):
-        self.name = "Pinwheel"
+        self.name = "Pinwheels"
         self.hexes = hexmodel
         self.live_pinwheels = []  # List that holds Pinwheel objects
         self.speed = 1.0 / randint(2, 20)

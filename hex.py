@@ -5,7 +5,7 @@ Model to communicate with a Hex simulator over a TCP socket
 from random import choice, randint
 from pixel import Pixel
 
-NUM_HEXES = 2
+NUM_HEXES = 4
 HEX_SIZE = 11    # Number of LEDs high/wide for each hex
 HEX_OFFSET = 5
 
@@ -24,10 +24,6 @@ Parameters for each Hex: (X, Y)
 """
 
 
-def load_hexes(model):
-    return Hex(model)
-
-
 class Hex(object):
     """
     Hex object (= hex model) represents all LEDs (so all giant hexes)
@@ -36,18 +32,9 @@ class Hex(object):
     Hash table for { coordinate: pixel object }
     Hex coordinates (hex, x, y) are the keys
     Pixel objects are the values
-    
-    Frames implemented to shorten messages:
-    Send only the pixels that change color
-    Frames are hash tables where keys are (hex, x, y) coordinates
-    and values are (r, g, b) colors <-- Not sure about this (ToDo: check)
     """
-    def __init__(self, model):
-        # General features of the Hexes (such as size)
-        self.model = model
-
-        # new cellmap implementation is dictionary of { coord: pixel object }
-        self.cellmap = self.add_hexes()
+    def __init__(self):
+        self.cellmap = self.add_hexes()  # { coord: pixel object }
 
     def __repr__(self):
         return "{} Hexes: {} x {}".format(self.hexes, self.size, self.size)
@@ -72,6 +59,9 @@ class Hex(object):
         """Get all pixel objects"""
         return self.cellmap.values()
 
+    def all_onscreen_pixels(self):
+        return [pixel for pixel in self.all_pixels() if pixel.cell_exists()]
+
     def cell_exists(self, coord):
         """True if the coordinate is valid"""
         return coord in self.cellmap
@@ -88,7 +78,7 @@ class Hex(object):
     def set_cell(self, coord, color):
         """Set the pixel at coord (h,x,y) to color hsv"""
         if self.cell_exists(coord):
-            self.get_pixel(coord).set_next_frame(color)
+            self.get_pixel(coord).set_color(color)
 
     def set_cells(self, coords, color):
         """Set the pixels at coords to color hsv"""
@@ -97,8 +87,8 @@ class Hex(object):
 
     def set_all_cells(self, color):
         """Set all cells to color hsv"""
-        for pixel in self.all_pixels():
-            pixel.set_next_frame(color)
+        for pixel in self.all_onscreen_pixels():
+            pixel.set_color(color)
 
     def black_cell(self, coord):
         """Blacken the pixel at coord (h,x,y)"""
@@ -112,37 +102,42 @@ class Hex(object):
 
     def black_all_cells(self):
         """Blacken all pixels"""
-        for pixel in self.all_pixels():
+        for pixel in self.all_onscreen_pixels():
             pixel.set_black()
 
     def clear(self):
         """Force all cells to black"""
-        for pixel in self.all_pixels():
+        for pixel in self.all_onscreen_pixels():
             pixel.force_black()
-        self.go()
 
-    #
-    # Sending messages to the model: delay, intensity, frame
-    #
-    def go(self):
-        """Push the frame to the model"""
-        self.send_frame()
-        self.model.go()
+    def push_next_to_current_frame(self):
+        """Push the next frame back into the current frame"""
+        for pixel in self.all_onscreen_pixels():
+            pixel.push_next_to_current_frame()
 
-    def send_delay(self, delay):
-        """Send the delay signal"""
-        self.model.send_delay(delay)
+    # def push_current_to_interp_frame(self):
+    #     """Dump the current frame into the interp frame"""
+    #     for pixel in self.all_pixels():
+    #         pixel.push_current_to_interp_frame()
 
-    def send_intensity(self, intensity):
-        """Send the intensity signal"""
-        self.model.send_intensity(intensity)
+    # def push_next_to_interp_frame(self):
+    #     """Dump the current frame into the interp frame"""
+    #     for pixel in self.all_pixels():
+    #         pixel.push_next_to_interp_frame()
 
-    def send_frame(self):
-        """If a pixel has changed, send its coord + color, then update the pixel's frame"""
-        for pixel in self.all_pixels():
-            if pixel.has_changed():
-                self.model.set_cell(pixel.get_coord(), pixel.get_next_color())
-                pixel.update_frame()
+    def interpolate_frame(self, fraction):
+        """Dump the current frame into the interp frame"""
+        for pixel in self.all_onscreen_pixels():
+            pixel.interpolate_frame(fraction)
+
+    # def set_interp_frame(self, fraction):
+    #     """Interpolate pixels between current and next frames"""
+    #     if fraction < 0:
+    #         self.push_current_to_interp_frame()
+    #     elif fraction > 1:
+    #         self.push_next_to_interp_frame()
+    #     else:
+    #         self.interpolate_frame(fraction)
 
     #
     # Setting up the Hex
@@ -228,23 +223,6 @@ def get_rand_neighbor(coord):
     Neighbor may not be in bounds
     """
     return choice(neighbors(coord))
-
-
-def get_LL_corner(hex_num):
-    """
-    Returns the lower-left coordinate of the hex_num
-    """
-    (big_x, big_y) = BIG_COORD[hex_num]
-    return (big_x * HEX_SIZE, big_y * HEX_SIZE)
-
-
-def get_center(hex_num):
-    """
-    Returns the center coordinate of the hex_num
-    """
-    half_hex = HEX_SIZE // 2
-    (x_ll, y_ll) = get_LL_corner(hex_num)
-    return (x_ll + half_hex, y_ll + half_hex)
 
 
 def hex_shape(coord, size):

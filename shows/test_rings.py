@@ -10,7 +10,7 @@ class TestRings(object):
         self.hexes = hexmodel
         self.ring_number = 0
         self.ring_color = random_color()
-        self.speed = 0.1 * randint(1, 6)
+        self.speed = 1.0  # 0.1 * randint(1, 6)
 
     def next_frame(self):
 

@@ -19,7 +19,7 @@ import shows
 
 NUM_CHANNELS = 2  # Dual channels
 SHOW_TIME = 160  # Time of shows in seconds
-FADE_TIME = 80  # Fade In + Out times in seconds
+FADE_TIME = 20  # Fade In + Out times in seconds
 SPEED_MULT = 1  # Multiply every delay by this value. Higher = much slower shows
 
 
@@ -212,8 +212,9 @@ if __name__ == '__main__':
 
         while True:
             # Force channel 1 out of phase with channel 2 by 50%
-            channels[1].runner.show_runtime = (channels[0].runner.show_runtime + (SHOW_TIME / 2.0)) % SHOW_TIME
-            time.sleep(1)
+            if NUM_CHANNELS > 1:
+                channels[1].runner.show_runtime = (channels[0].runner.show_runtime + (SHOW_TIME / 2.0)) % SHOW_TIME
+                time.sleep(1)
 
     except KeyboardInterrupt:
         for channel in channels:
