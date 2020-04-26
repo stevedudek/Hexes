@@ -59,15 +59,17 @@ class Flake(object):
 
         # 2nd line
         spoke2 = randint(0, spoke)
-        second_line = Lines(self.hexes, start=choice(first_line.get_line()), direction=1, length=spoke2,
-                            color=rgb_to_hsv((250, 250, 255)))
-        self.line.append(second_line)
+        if first_line.get_line():
+            second_line = Lines(self.hexes, start=choice(first_line.get_line()), direction=1, length=spoke2,
+                                color=rgb_to_hsv((250, 250, 255)))
+            self.line.append(second_line)
 
-        # 3rd line
-        spoke3 = randint(0, spoke2)
-        third_line = Lines(self.hexes, start=choice(second_line.get_line()), direction=5, length=spoke3,
-                           color=rgb_to_hsv((245, 245, 255)))
-        self.line.append(third_line)
+            # 3rd line
+            spoke3 = randint(0, spoke2)
+            if second_line.get_line():
+                third_line = Lines(self.hexes, start=choice(second_line.get_line()), direction=5, length=spoke3,
+                                   color=rgb_to_hsv((245, 245, 255)))
+                self.line.append(third_line)
 
 
 class Lines(object):

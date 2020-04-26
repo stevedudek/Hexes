@@ -72,29 +72,24 @@ class Seasons(object):
 
             self.draw_ground(self.sky_color, self.ground_color)
             self.draw_tree()
-
-            self.hexes.go()
-
             yield 5
 
             self.sky_color = rgb_to_hsv((50, 50, 255))
             self.ground_color = rgb_to_hsv((54, 255, 50))
             self.draw_ground(self.sky_color, self.ground_color)
             self.draw_tree()
-            self.hexes.go()
+            yield 0.1
 
             shuffle(self.treespot)
             for cell in self.treespot:
                 if self.hexes.cell_exists(cell):
                     self.hexes.set_cell(cell, rgb_to_hsv((255,230,230)))
-                    self.hexes.go()
                     yield 0.2
 
             shuffle(self.treespot)
             for cell in self.treespot:
                 if self.hexes.cell_exists(cell):
                     self.hexes.set_cell(cell, rgb_to_hsv((0,255,0)))
-                    self.hexes.go()
                     yield 0.2
 
             # Big leaves
@@ -110,7 +105,6 @@ class Seasons(object):
                     self.leaves.append(Leaf(self.hexes, cell, green))
 
                 self.draw_leaves()
-                self.hexes.go()
                 yield 0.5
 
             # Apples
@@ -120,7 +114,6 @@ class Seasons(object):
                 apple = choice(self.treespot)
                 if self.hexes.cell_exists(apple):
                     self.hexes.set_cell(apple, apple_color)
-                self.hexes.go()
                 yield 0.5
 
             yield 5
@@ -133,7 +126,6 @@ class Seasons(object):
                 leaf.turn_red()
 
                 self.draw_leaves()
-                self.hexes.go()
                 yield 0.05
 
             # Drop leaves
@@ -152,7 +144,6 @@ class Seasons(object):
                 self.draw_ground(self.sky_color, self.ground_color)
                 self.draw_tree()
                 self.draw_leaves()
-                self.hexes.go()
                 yield 0.1
 
             self.sky_color = rgb_to_hsv((0, 0, 100))
@@ -165,7 +156,6 @@ class Seasons(object):
                 self.draw_ground(self.sky_color, self.ground_color)
                 self.draw_tree()
                 self.draw_leaves()
-                self.hexes.go()
                 yield 0.1
 
             self.sky_color = rgb_to_hsv((0, 0, 50))
@@ -178,7 +168,6 @@ class Seasons(object):
                 self.draw_ground(self.sky_color, self.ground_color)
                 self.draw_tree()
                 self.draw_leaves()
-                self.hexes.go()
                 yield 0.1
 
             yield 5
@@ -187,8 +176,6 @@ class Seasons(object):
 
             self.branches = []
             self.hexes.black_all_cells()
-            self.hexes.go()
-
             yield 4
 
     def draw_leaves(self):
@@ -200,7 +187,6 @@ class Seasons(object):
         for cell in tree_cells:
             if self.hexes.cell_exists(cell):
                 self.hexes.set_cell(cell, color)
-                self.hexes.go()
                 yield 0.5
 
     def draw_ground(self, sky, ground):

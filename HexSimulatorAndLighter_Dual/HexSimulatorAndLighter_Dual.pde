@@ -37,6 +37,21 @@ int[][] LED_LOOKUP = {
   {  1,  0, 31, 32, 36, 35, -1, -1, -1, -1,  -1}
 };
 
+int[] DIM_AMOUNT = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 
+   1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 
+   8, 8, 9, 9, 9, 10, 10, 11, 11, 12, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 
+   17, 18, 18, 19, 19, 20, 21, 21, 22, 22, 23, 24, 24, 25, 25, 26, 27, 27, 28, 29, 
+   29, 30, 31, 31, 32, 33, 34, 34, 35, 36, 37, 37, 38, 39, 40, 41, 41, 42, 43, 44, 
+   45, 45, 46, 47, 48, 49, 50, 51, 52, 53, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 
+   63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 76, 77, 78, 79, 80, 81, 82, 83, 
+   84, 86, 87, 88, 89, 90, 92, 93, 94, 95, 96, 98, 99, 100, 101, 103, 104, 105, 106, 
+   108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 123, 124, 125, 127, 128, 
+   130, 131, 132, 134, 135, 137, 138, 140, 141, 143, 144, 146, 147, 149, 150, 152, 
+   153, 155, 157, 158, 160, 161, 163, 164, 166, 168, 169, 171, 173, 174, 176, 178, 
+   179, 181, 183, 184, 186, 188, 189, 191, 193, 195, 196, 198, 200, 202, 203, 205, 
+   207, 209, 211, 212, 214, 216, 218, 220, 222, 224, 225, 227, 229, 231, 233, 235, 
+   237, 239, 241, 243, 245, 247, 249, 251, 253, 255 };
+
 //
 //  Hex shape primitives
 //
@@ -97,7 +112,7 @@ Strip[] strip_array = new Strip[NUM_HEXES];
 // 0:LED number, 1:(x,y) coordinate, and 2:none
 int DRAW_LABELS = 2;
 
-boolean UPDATE_VISUALIZER = true;  // turn false for LED-only updates
+boolean UPDATE_VISUALIZER = false;  // turn false for LED-only updates
 
 int BRIGHTNESS = 100;  // A percentage
 
@@ -156,7 +171,7 @@ void setup() {
   stroke(0);
   fill(255,255,0);
   
-  frameRate(20);
+  frameRate(60);
   
   for (int h = 0; h < NUM_HEXES; h++) {
     bigHex[h] = makeBigHex(h);
@@ -857,6 +872,8 @@ short interp(short a, short b, float fract) {
   if (a == b) return a;
   if (fract <= 0) return a;
   if (fract >= 1) return b;
+  if (b == 0) return (short)DIM_AMOUNT[int(a * fract)];
+  if (a == 0) return (short)DIM_AMOUNT[int(b * fract)];
   return (short)(a + fract * (b - a));
 }
 

@@ -1,9 +1,8 @@
 """
 sACN: Class to communicate with the DMX King (should only be 1 instance)
 """
-import sacn
-from color import hsv_to_rgb
-from color import dim_color
+import sacn  # Must use Python >= 3.6
+import color as color_func
 
 
 class sACN(object):
@@ -44,9 +43,9 @@ class sACN(object):
 
         # Dim hsv and convert hsv to rgb
         if self.brightness < 1:
-            color = dim_color(color, amount=self.brightness)
+            color = color_func.dim_color(color, amount=self.brightness)
 
-        for i, c in enumerate(hsv_to_rgb(color)):
+        for i, c in enumerate(color_func.hsv_to_rgb(color)):
             try:
                 self.leds[universe][index + i] = c
             except IndexError:

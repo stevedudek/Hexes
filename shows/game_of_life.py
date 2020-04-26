@@ -97,7 +97,7 @@ class GameOfLife(object):
         
         # Most of the time set the background to black
         # Some of the time choose a colored background
-        self.off_color = random_color() if helpfunc.one_in(5) else black()
+        self.off_color = black()
         
     def next_frame(self):
 

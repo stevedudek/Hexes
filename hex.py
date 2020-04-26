@@ -5,7 +5,7 @@ Model to communicate with a Hex simulator over a TCP socket
 from random import choice, randint
 from pixel import Pixel
 
-NUM_HEXES = 4
+NUM_HEXES = 2
 HEX_SIZE = 11    # Number of LEDs high/wide for each hex
 HEX_OFFSET = 5
 
@@ -115,29 +115,10 @@ class Hex(object):
         for pixel in self.all_onscreen_pixels():
             pixel.push_next_to_current_frame()
 
-    # def push_current_to_interp_frame(self):
-    #     """Dump the current frame into the interp frame"""
-    #     for pixel in self.all_pixels():
-    #         pixel.push_current_to_interp_frame()
-
-    # def push_next_to_interp_frame(self):
-    #     """Dump the current frame into the interp frame"""
-    #     for pixel in self.all_pixels():
-    #         pixel.push_next_to_interp_frame()
-
     def interpolate_frame(self, fraction):
         """Dump the current frame into the interp frame"""
         for pixel in self.all_onscreen_pixels():
             pixel.interpolate_frame(fraction)
-
-    # def set_interp_frame(self, fraction):
-    #     """Interpolate pixels between current and next frames"""
-    #     if fraction < 0:
-    #         self.push_current_to_interp_frame()
-    #     elif fraction > 1:
-    #         self.push_next_to_interp_frame()
-    #     else:
-    #         self.interpolate_frame(fraction)
 
     #
     # Setting up the Hex
@@ -156,7 +137,7 @@ class Hex(object):
     def rand_cell(self, hex_number=None):
         """Pick a random coordinate"""
         if hex_number is None:
-            return choice(self.cellmap.keys())
+            return choice(list(self.cellmap.keys()))
         return choice([(h, x, y) for (h, x, y) in self.cellmap.keys() if h == hex_number])
 
     def rand_hex(self):

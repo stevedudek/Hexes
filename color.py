@@ -105,8 +105,8 @@ def interp_color(hsv1, hsv2, fraction):
         return hsv1
     elif fraction >= 1:
         return hsv2
-    elif not are_different(hsv1, hsv2):
-        return hsv1
+    # elif not are_different(hsv1, hsv2):
+    #     return hsv1
     elif hsv1[2] == 0:  # 1 is black, so dim 2
         return dim_color(hsv2, fraction)
     elif hsv2[2] == 0:  # 2 is black, so dim 1
@@ -118,7 +118,7 @@ def interp_color(hsv1, hsv2, fraction):
 
 
 def interp_value(v1, v2, fraction):
-    return v1 + (fraction * (v2 - v1))
+    return int(v1 + (fraction * (v2 - v1)))
 
 
 def are_different(color1, color2):
@@ -161,10 +161,18 @@ def dim_color(hsv, amount):
                   207, 209, 211, 212, 214, 216, 218, 220, 222, 224, 225, 227, 229, 231, 233, 235,
                   237, 239, 241, 243, 245, 247, 249, 251, 253, 255]
 
-    amount = max([min([amount, 1]), 0])
-    return hsv[0], hsv[1], dim_amount[int(hsv[2] * amount)]
+    if amount >= 1:
+        return hsv
+    elif amount <= 0:
+        return hsv[0], hsv[1], 0
+    else:
+        return hsv[0], hsv[1], dim_amount[min([int(hsv[2] * amount), 255])]  # > 255 crashes the above array
 
 
 def color_to_int(h, s, v):
     """Convert a (byte, byte, byte) color to an int"""
-    return h << 16 | s << 8 | v
+    return int(h) << 16 | int(s) << 8 | int(v)
+
+
+def int_to_color(color):
+    return (color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF

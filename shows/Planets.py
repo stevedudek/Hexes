@@ -1,6 +1,7 @@
 from color import gradient_wheel, random_color, change_color, hue_to_color, random_hue
 from random import random, choice, randint
 
+from hex import NUM_HEXES
 import HelperFunctions as helpfunc
 
 
@@ -103,7 +104,7 @@ class Planets(object):
 
         while True:
 
-            if len(self.planets) < (helpfunc.all_hexes() * 2) and helpfunc.one_in(20):
+            if len(self.planets) < (NUM_HEXES * 2) and helpfunc.one_in(20):
                 h = helpfunc.get_random_hex()
                 self.planets.append(Planet(hexmodel=self.hexes,
                                     pos=choice(helpfunc.hex_ring(helpfunc.get_center(h), 5)),

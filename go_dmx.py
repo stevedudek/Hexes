@@ -18,7 +18,7 @@ from model.simulator import SimulatorModel  # Sends signals to Processing screen
 #    Enabled by two instances of the ShowRunner object
 #    HexServer's self.channel is now self.channels
 #
-#  4/19/2020
+#  4/20/2020
 #
 #  Sending singles to the DMX controller
 #
@@ -26,13 +26,13 @@ from model.simulator import SimulatorModel  # Sends signals to Processing screen
 #
 #  ChannelRunner
 #  -------------
-#  Holds 1 DMX or Processing runner and 1-or-2 HexServers (that contain Hex models with Pixels)
+#  Holds 1 DMX or Processing runner and 1-or-2 HexServers (that each contain their own Hex model with Pixels)
 #  Each channel = 1 HexServer
 #  ChannelRunner morphs each channel between current and next frames
-#  Interpolate two channels together
+#  Also interpolate two channels together
 #  Sends signals to LEDs via either the DMX or Processing runner
 #
-#  HexServer (ToDo: should HexServer get consolidated with the the ShowRunner?)
+#  HexServer
 #  ---------
 #  Mixes a ShowRunner and a Hex model to send show commands on to the hex model
 #  Holds 1 ShowRunner and 1 Hex model (containing Pixels)
@@ -48,65 +48,110 @@ from model.simulator import SimulatorModel  # Sends signals to Processing screen
 #  Dictionary of {coord: pixel}
 #  Ability to set a pixel's color, clear all pixels, etc.
 #  Each channel should have its own Hex model
+#  A Hex model has a dictionary of Pixels = { coord: Pixel object }
+#
+#  Pixel
+#  -----
+#  Contain color states (current frame, next frame, interpolation frame)
+#  For now, 1 LED per pixel, although code revisions could contain instead an array of LEDs
+#  Knows its universe, LED number, and coordinate
+#
+#  Color
+#  -----
+#  Not a class, just functional conversions
+#  Color is simply a tuple of (hue, saturation, value) with each 0-255
+#  Why HSV? Because it makes 2-color interpolation simpler and cleaner (interpolated RGB is muddy)
 
 
-NUM_CHANNELS = 1  # Dual channels
-SHOW_TIME = 160  # Time of shows in seconds
-FADE_TIME = 20  # Fade In + Out times in seconds
-SPEED_MULT = 1  # Multiply every delay by this value. Higher = much slower shows
+SHOW_TIME = 30  # Time of shows in seconds
+FADE_TIME = 20  # Fade In + Out times in seconds. If FADE_TIME == SHOW_TIME, then "always be fading"
+SPEED_MULT = 2  # Multiply every delay by this value. Higher = much slower shows.
 
 
 class ChannelRunner(object):
     """1. Morph each channel between current and next frames
        2. Interpolate two channels together
-       2. send signals to LEDs"""
-    def __init__(self, channels, dmx_runner):
+       3. send signals to LEDs
+       4. Put 2nd channel out of phase with the first and trigger restarting 2nd show"""
+    def __init__(self, channels, dmx_runner, has_simulator, max_show_time):
         self.channels = channels  # channels = HexServers
-        self.dmx_runner = dmx_runner  # sACN or to-Processing model
-        self.running = True
+        self.one_channel = (len(self.channels) == 1)  # Boolean
+        self.dmx_runner = dmx_runner  # sACN / DMX King
+        self.has_simulator = has_simulator
+        self.simulator = SimulatorModel(frame_rate=10, hostname="localhost", port=4444) if has_simulator else None
+        self.max_show_time = max_show_time
+        self.reset_channel_2 = True
 
     def start(self):
         for channel in self.channels:
             channel.start()  # start related service threads
 
     def go(self):
-        """Run a microframe"""
+        """Run a micro-frame:
+           Interpolates all pixels between the hex_model's current color & next frame color as fast as possible
+           Interpolation fraction = time.now() between when the last frame finished and the show's yield / delay time
+           Fast interpolation turns on LEDs more gradually,
+           but may strain the processor
+        """
         for channel in self.channels:
             channel.set_interp_frame()  # Set the interp_frames
 
-        if len(self.channels) == 2:
+        fract_channel1 = self.channels[0].get_show_intensity()  # 0.0-1.0
+
+        if not self.one_channel:
             channel1_hex_model, channel2_hex_model = self.channels[0].hex_model, self.channels[1].hex_model
-            fract_channel1 = self.channels[0].get_intensity()
-            print(fract_channel1)
 
             # Two Channels require channel interpolation
             for coord in channel1_hex_model.all_cells():
                 pixel1, pixel2 = channel1_hex_model.get_pixel(coord), channel2_hex_model.get_pixel(coord)
                 if pixel1.cell_exists():
-                    interp_color = color.interp_color(pixel1.interp_frame, pixel2.interp_frame, fract_channel1)
-                    dmx_runner.set(pixel1, interp_color)  # Queue up one pixel's DMX signal
+                    interp_color = color.interp_color(pixel2.interp_frame, pixel1.interp_frame, fract_channel1)
+                    if self.dmx_runner is not None:
+                        self.dmx_runner.set(pixel1, interp_color)  # Queue up one pixel's DMX signal
+                    if self.simulator:
+                        self.simulator.set(pixel1.get_coord(), interp_color)  # Queue up visualizer colors
+
+            self.check_reset_channel_2()  # Force channel 2 to reset if time
 
         else:
             # One Channel just dumps the single channel
             for pixel in self.channels[0].hex_model.all_onscreen_pixels():
-                dmx_runner.set(pixel, pixel.interp_frame)  # Queue up one pixel's DMX signal
+                dimmed_interp_color = color.dim_color(pixel.interp_frame, fract_channel1)
+                if self.dmx_runner is not None:
+                    self.dmx_runner.set(pixel, dimmed_interp_color)  # Queue up one pixel's DMX signal
+                if self.simulator:
+                    self.simulator.set(pixel.get_coord(), dimmed_interp_color)  # Queue up visualizer colors
 
-        dmx_runner.go()  # Dump all DMX signals on to LEDs
+        if self.dmx_runner is not None:
+            self.dmx_runner.go()  # Dump all DMX signals on to LEDs
+        if self.simulator:
+            self.simulator.go()  # Try to dump signals to visualizer
 
     def stop(self):
         for channel in self.channels:
             channel.stop()
 
-    def stagger_channels(self):
-        if len(self.channels) > 1:
-            self.channels[1].show_runner.show_runtime = (self.channels[0].show_runner.show_runtime + (SHOW_TIME / 2.0)) % SHOW_TIME
+    def check_reset_channel_2(self):
+        """Check and flip the trigger switch to reset channel 2's show"""
+        channel_0_show_fract = self.channels[0].show_runner.show_runtime / self.max_show_time  # 0-2
+
+        if not self.reset_channel_2 and (0.5 < channel_0_show_fract < 1.0):
+            self.channels[1].show_runner.force_next_show()
+            self.reset_channel_2 = True
+
+        if self.reset_channel_2 and (1.5 < channel_0_show_fract < 2.0):
+            self.reset_channel_2 = False
 
 
 class HexServer(object):
-    def __init__(self, hex_model, channel):
+    """Two channels = two different HexServers
+       Mixes a ShowRunner with a Hex model to send show commands on to the hex model
+       Holds 1 ShowRunner and 1 Hex model (containing Pixels)"""
+    def __init__(self, hex_model, channel, one_channel, max_show_time):
         self.hex_model = hex_model
         self.channel = channel
-        self.args = args
+        self.one_channel = one_channel  # boolean
+        self.max_show_time = max_show_time
         self.show_runner = None
         self.running = False
         self._create_services()
@@ -114,8 +159,9 @@ class HexServer(object):
     def _create_services(self):
         """Set up the ShowRunners and launch the first shows"""
         self.show_runner = ShowRunner(model=self.hex_model,
-                                      max_showtime=args.max_time,
-                                      channel=self.channel)
+                                      channel=self.channel,
+                                      one_channel=self.one_channel,
+                                      max_show_time=self.max_show_time)
 
         if args.shows:
             named_show = args.shows[0]
@@ -139,26 +185,30 @@ class HexServer(object):
                 print("Exception stopping Hexes! {}".format(e))
                 traceback.print_exc()
 
-    def get_intensity(self):
-        """Get the channel's intensity from the ShowRunner"""
-        return self.show_runner.show_intensity
+    def get_show_intensity(self):
+        """Get the channel's intensity from the ShowRunner. Call down."""
+        return self.show_runner.get_show_intensity()
 
     def set_interp_frame(self):
-        """Set the ShowRunner's interp_frame"""
+        """Set the ShowRunner's interp_frame. Call down."""
         self.show_runner.set_interp_frame()
 
 
 class ShowRunner(threading.Thread):
-    def __init__(self, model, max_showtime=1000, channel=0):
+    """Contains 1 Hex model
+       Get frames from the Python shows
+       Puts those frames on to Hex Model"""
+    def __init__(self, model, channel=0, one_channel=True, max_show_time=60):
         super(ShowRunner, self).__init__(name="ShowRunner")
         self.model = model  # Hex class within hex.py
         self.running = True
-        self.max_show_time = max_showtime
+        self.max_show_time = max_show_time
         self.show_runtime = 0
-        self.show_intensity = 0
         self.time_since_reset = 0
+        self.external_restart = False  # External trigger to restart show (only for Channel 2)
         self.channel = channel
-        # self.lock = threading.Lock()  # Prevent overlapping messages
+        self.one_channel = one_channel  # Boolean
+        self.num_channels = 1 if one_channel else 2
         self.time_frame_start = datetime.datetime.now()
         self.time_frame_end = datetime.datetime.now()
 
@@ -173,6 +223,7 @@ class ShowRunner(threading.Thread):
         self.show_params = None
 
     def get_frame_fraction(self):
+        """Calculates the microframe interpolation fraction (0.0 - 1.0) between frame start time and frame end time"""
         fraction = (datetime.datetime.now() - self.time_frame_start) / (self.time_frame_end - self.time_frame_start)
         fraction = max([min([fraction, 1]), 0])  # Bound fraction between 0-1
         return fraction
@@ -181,8 +232,12 @@ class ShowRunner(threading.Thread):
         self.model.clear()
 
     def set_interp_frame(self):
-        """Set the model's interpolation frame"""
+        """Set the model's interpolation frame. Call down."""
         self.model.interpolate_frame(self.get_frame_fraction())
+
+    def force_next_show(self):
+        """External trigger to queue the next show"""
+        self.external_restart = True
 
     def next_show(self, name=None):
         show = None
@@ -201,9 +256,9 @@ class ShowRunner(threading.Thread):
         self.show = show(self.model)  # Calls the particular show.__init__(hex_model)
         self.framegen = self.show.next_frame()
         self.show_params = hasattr(self.show, 'set_param')
-        self.time_since_reset = 0
-        if self.channel == 0:
-            self.show_runtime = 0  # Don't reset other channels' clocks
+        self.time_since_reset = 0  # Prevents "bounce" of kicking off many shows
+        self.show_runtime = 0
+        self.external_restart = False
 
         print ("next show for channel {}: {}".format(self.channel, self.show.name))
 
@@ -222,18 +277,26 @@ class ShowRunner(threading.Thread):
             try:
                 # Run a single frame of a show
                 delay = self.get_next_frame() * SPEED_MULT  # float seconds
-                self.time_frame_start = datetime.datetime.now()
-                self.time_frame_end = self.time_frame_start + datetime.timedelta(seconds=delay)
-                self.show_intensity = self.get_show_intensity()  # Calculate the channel strength (0-1)
+                self.time_frame_start = datetime.datetime.now()  # Set frame's start time as now
+                self.time_frame_end = self.time_frame_start + datetime.timedelta(seconds=delay)  # end = now + delay
 
-                time.sleep(delay)  # The only delay!
+                time.sleep(delay)  # The only delay! Taken from each show's yield (float) function call.
 
-                self.model.push_next_to_current_frame()  # Get ready for the next fream
-                # self.print_heap_size()
+                self.model.push_next_to_current_frame()  # Get ready for the next frame
+                # self.print_heap_size()  # Worried about memory use? Turn this on and check.
 
-                if self.show_runtime >= self.max_show_time and self.time_since_reset > FADE_TIME:
-                    print ("max show time elapsed, changing shows")
-                    self.next_show()
+                self.show_runtime += delay
+                self.time_since_reset += delay
+
+                # Check to see whether to start the next show. The trigger is different for each channel.
+                if self.channel == 0:
+                    if self.show_runtime >= (self.max_show_time * self.num_channels) and self.time_since_reset > FADE_TIME:
+                        print ("max show time elapsed, changing shows")
+                        self.next_show()
+                else:  # channel 1
+                    if self.external_restart and self.time_since_reset > FADE_TIME:
+                        print ("external trigger to change shows")
+                        self.next_show()
 
             except Exception:
                 print ("unexpected exception in show loop!")
@@ -252,43 +315,21 @@ class ShowRunner(threading.Thread):
         self.running = False
 
     def get_show_intensity(self):
-        """Return a 0-255 intensity (off -> on) depending on where
+        """Return a 0-1 intensity (off -> on) depending on where
            show_runtime is along towards max_show_time"""
         if self.show_runtime <= FADE_TIME:
-            intensity = 255 * self.show_runtime / FADE_TIME
-        elif self.show_runtime <= self.max_show_time / 2.0:
-            intensity = 255
-        elif self.show_runtime <= (self.max_show_time / 2.0) + FADE_TIME:
-            intensity = 255 * (FADE_TIME - (self.show_runtime - (self.max_show_time / 2.0))) / FADE_TIME
+            intensity = self.show_runtime / float(FADE_TIME)
+        elif self.show_runtime <= self.max_show_time:
+            intensity = 1
+        elif self.show_runtime <= self.max_show_time + FADE_TIME:
+            intensity = 1.0 - ((self.show_runtime - self.max_show_time) / float(FADE_TIME))
         else:
-            intensity = 0
-        return int(round(intensity))
-
-#
-# def turn_on_simulator():
-#     """Turn on the Processing simulator. Return channels"""
-#     sim_host = "localhost"
-#     sim_port = 4444  # base port number
-#
-#     print ("Using Hex Simulator at {}:{}-{}".format(sim_host, sim_port, sim_port + NUM_CHANNELS - 1))
-#
-#     # ToDo: This is going to change
-#     # ToDo: Processing will not handle the dual shows
-#     # ToDo: Dual shows will be handles in go_dmx with model interpolation
-#
-#
-#     # Get ready for DUAL channels
-#     # Each channel (app) has its own ShowRunner and SimulatorModel
-#     channels = []  # array of channel objects
-#     for channel in range(NUM_CHANNELS):
-#         hex_simulator = SimulatorModel(sim_host, i, port=sim_port + i)
-#         hex_model = hex.load_hexes(hex_simulator)
-#         channels.append(HexServer(hex_model=hex_model, hex_simulator=hex_simulator, channel=args))
-#     return channels
+            intensity = 0  # For 2-channel running, the second half of a show's run time will be dark
+        return intensity
 
 
 def get_dmx_runner(bind_address):
-    """Turn on the DMX King. Return channels"""
+    """Turn on the DMX King. Return channels. This will fail if the WiFi is on."""
     if not bind_address:
         gateways = netifaces.gateways()[netifaces.AF_INET]
 
@@ -311,10 +352,12 @@ def get_dmx_runner(bind_address):
     return dmx_runner
 
 
-def set_up_channels():
-    # Get ready for DUAL channels
-    # Each channel (app) has its own ShowRunner, hex_model, and Pixels
-    channels = [HexServer(hex_model=Hex(), channel=channel) for channel in range(NUM_CHANNELS)]
+def set_up_channels(num_channels, max_show_time):
+    """Get ready for two channels
+       Each channel has its own ShowRunner, hex_model, and Pixels"""
+    one_channel = (num_channels == 1)  # Boolean
+    channels = [HexServer(hex_model=Hex(), channel=channel, one_channel=one_channel, max_show_time=max_show_time)
+                for channel in range(num_channels)]
     return channels
 
 
@@ -323,11 +366,13 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(description='Hexes Light Control')
-    parser.add_argument('--max-time', type=float, default=float(SHOW_TIME),
+    parser.add_argument('--max_time', action='store_true', default=int(SHOW_TIME),
                         help='Maximum number of seconds a show will run (default {})'.format(SHOW_TIME))
     parser.add_argument('--list', action='store_true', help='List available shows')
     parser.add_argument('--bind', help='Local address to use for sACN')
     parser.add_argument('--simulator', action='store_true', default=False, help='use the processing simulator')
+    parser.add_argument('--dmxoff', action='store_true', default=False, help='turn off the DMX controller')
+    parser.add_argument('--onechannel', action='store_true', default=False, help='turn off the DMX controller')
     parser.add_argument('shows', metavar='show_name', type=str, nargs='*',
                         help='name of show (or shows) to run')
 
@@ -338,17 +383,15 @@ if __name__ == '__main__':
         print (', '.join([show[0] for show in shows.load_shows()]))
         sys.exit(0)
 
-    if args.simulator:
-        dmx_runner = None
-    else:
-        dmx_runner = get_dmx_runner(args.bind)
+    num_channels = 2 if not args.onechannel else 1
+    dmx_runner = get_dmx_runner(args.bind) if not args.dmxoff else None
 
-    channel_runner = ChannelRunner(channels=set_up_channels(), dmx_runner=dmx_runner)
+    channel_runner = ChannelRunner(channels=set_up_channels(num_channels, args.max_time), dmx_runner=dmx_runner,
+                                   has_simulator=args.simulator, max_show_time = args.max_time)
     channel_runner.start()
 
     try:
         while True:
-            channel_runner.stagger_channels()  # Force channel 1 out of phase with channel 2 by 50%
             channel_runner.go()
 
     except KeyboardInterrupt:

@@ -9,22 +9,24 @@ def get_cell(coord):
     h, x, y = coord
     x = int(x)
     y = int(y)
+    x_half = int(x / 2)
 
     if x == 0:
-        return (h, 0, y)
+        return h, 0, y
     elif x > 0:
-        hex1 = helpfunc.hex_in_direction((h, 0, y), 1, (x / 2) + (x % 2))
-        return helpfunc.hex_in_direction(hex1, 0, x / 2)
+
+        hex1 = helpfunc.hex_in_direction((h, 0, y), 1, x_half + (x % 2))
+        return helpfunc.hex_in_direction(hex1, 0, x_half)
     else:
         x *= -1
-        hex1 = helpfunc.hex_in_direction((h, 0, y), 3, (x / 2) + (x % 2))
-        return helpfunc.hex_in_direction(hex1, 4, x / 2)
+        hex1 = helpfunc.hex_in_direction((h, 0, y), 3, x_half + (x % 2))
+        return helpfunc.hex_in_direction(hex1, 4, x_half)
 
 
 def get_box(coord, width, height):
     """Returns a list of cells within an box (x,y coord of the lower left corner)"""
     h, x, y = coord
-    return [get_cell((h, x + dx, y + dy)) for dx in range(width) for dy in range(height)]
+    return [get_cell((h, x + dx, y + dy)) for dx in range(int(width)) for dy in range(int(height))]
 
 
 def get_triangle(coord, length, width):
@@ -122,8 +124,8 @@ class House(Stuff):
     def draw_stuff(self, clock):
         pos = get_cell((self.h, self.x_coord, self.y_coord))
 
-        width = (self.y_coord / 2) + 2
-        height = (self.y_coord / 2) + 1
+        width = int((self.y_coord / 2) + 2)
+        height = int((self.y_coord / 2) + 1)
         self.hexes.set_cells(get_box(pos, width, height), self.wall)
 
         hex1 = helpfunc.hex_in_direction(pos, 2, height)

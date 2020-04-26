@@ -1,17 +1,23 @@
 /*
-  Hex Simulator Only
-  
-  1. Simulator: draws hexes on the monitor
+  Hex Simulator Only - draws hexes on the monitor
   
   Stripped down simulator to use with the DMX king
+  
+  No logic: all received (pixel, color) messages are drawn immediately
+  
+  Colors are hsv, because that's what the Python Showrunner uses
+  
+  Compatible with Processing 2 + 3
   
   4/21/20
   
 */
 
-int NUM_HEXES = 2;  // Number of Big Hexes
+// Number of Big Hexes (make sure this agrees with the one in hex.py)
+final int NUM_HEXES = 2;   
 
 // Wiring diagram - needs to be the same for all fabricated Hexes
+// (that's all - just a lookup table matching coordinate to LED)
 int[][] LED_LOOKUP = {
   { -1, -1, -1, -1, -1, 55, 59, 60, 94, 93,  98},
   { -1, -1, -1, -1, 54, 53, 61, 62, 92, 91,  99},
@@ -25,21 +31,6 @@ int[][] LED_LOOKUP = {
   {  3,  2, 29, 30, 38, 37, 77, -1, -1, -1,  -1},
   {  1,  0, 31, 32, 36, 35, -1, -1, -1, -1,  -1}
 };
-
-int[] DIM_AMOUNT = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 
-   1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 
-   8, 8, 9, 9, 9, 10, 10, 11, 11, 12, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 
-   17, 18, 18, 19, 19, 20, 21, 21, 22, 22, 23, 24, 24, 25, 25, 26, 27, 27, 28, 29, 
-   29, 30, 31, 31, 32, 33, 34, 34, 35, 36, 37, 37, 38, 39, 40, 41, 41, 42, 43, 44, 
-   45, 45, 46, 47, 48, 49, 50, 51, 52, 53, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 
-   63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 76, 77, 78, 79, 80, 81, 82, 83, 
-   84, 86, 87, 88, 89, 90, 92, 93, 94, 95, 96, 98, 99, 100, 101, 103, 104, 105, 106, 
-   108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 123, 124, 125, 127, 128, 
-   130, 131, 132, 134, 135, 137, 138, 140, 141, 143, 144, 146, 147, 149, 150, 152, 
-   153, 155, 157, 158, 160, 161, 163, 164, 166, 168, 169, 171, 173, 174, 176, 178, 
-   179, 181, 183, 184, 186, 188, 189, 191, 193, 195, 196, 198, 200, 202, 203, 205, 
-   207, 209, 211, 212, 214, 216, 218, 220, 222, 224, 225, 227, 229, 231, 233, 235, 
-   237, 239, 241, 243, 245, 247, 249, 251, 253, 255 };
 
 //
 //  Hex shape primitives
@@ -74,22 +65,14 @@ int HEX_OFFSET = 5;  // Offset to add to hex coordinate to make all coordinates 
 int NUM_PIXELS = PIXEL_WIDTH * PIXEL_WIDTH;
 int NUM_LEDS = 106;  // includes spacer leds
 
-// Color buffers: [x][y][r,g,b]
-// Two buffers permits updating only the lights that change color
-// May improve performance and reduce flickering
-int[][][] curr_buffer = new int[NUM_HEXES][PIXEL_WIDTH][PIXEL_WIDTH];
-int[][][] next_buffer = new int[NUM_HEXES][PIXEL_WIDTH][PIXEL_WIDTH];
-
 // Calculated pixel constants for simulator display
 int SCREEN_SIZE = 1200;  // hex screenfloat SMALL_SIZE = (SCREEN_SIZE - 20) / (PIXEL_WIDTH * NUM_HEXES);  // Size of a small hex
 int BIG_HEX_WIDTH = (int)(hexHeight() * PIXEL_WIDTH);  // Width of one big hex
 int SCREEN_WIDTH = (int)((BIG_HEX_WIDTH) * NUM_HEXES);
 int SCREEN_HEIGHT = (int)(vertDistance() * PIXEL_WIDTH) + 20; // Height + a little
-int DRAW_LABELS = 0;
+int DRAW_LABELS = 2;
 
 HexForm[] bigHex = new HexForm[NUM_HEXES];  // Grid model of Big Hexes
-
-PFont font_hex = createFont("Helvetica", 12, true);
 
 //
 // Helper classes: Coord
@@ -106,12 +89,16 @@ class Coord {
 //
 // setup
 //
+void settings() {
+  size(SCREEN_WIDTH, SCREEN_HEIGHT);  // Processing 3
+}
+
 void setup() {
-  colorMode(RGB, 255);  // HSB colors (not RGB)
+  size(SCREEN_WIDTH, SCREEN_HEIGHT);  // Processing 2 (comment out if using 3)
+  colorMode(HSB, 255);  // HSB colors (not hsv)
   
-  size(SCREEN_WIDTH, SCREEN_HEIGHT);
   stroke(0);
-  fill(128,128,128);
+  fill(0, 0, 128);
   
   frameRate(10);
   
@@ -119,25 +106,24 @@ void setup() {
     bigHex[h] = makeBigHex(h);
   }
   
-  initializeColorBuffers();  // Stuff curr/next frames with zeros (all black)
-  
   _buf = new StringBuffer();
   _server = new Server(this, port);
   println("server listening: " + _server);
+  
+  drawHexes();
 }
 
 void draw() {
-  pollServer();      // Get messages from python show runner
-  drawHexes();       // Re-draw hexes - this is hugely expensive
-  pushFrame();
-//  print_memory_usage();
+  // Get (pixel, color) messages from python show runner
+  // and draw them as fast as possible
+  pollServer();  
 }
 
 void drawHexes() {
   for (int h = 0; h < NUM_HEXES; h++) {
     for (byte x = 0; x < PIXEL_WIDTH; x++) {
       for (byte y = 0; y < PIXEL_WIDTH; y++) {
-        if (bigHex[h].hexExists(x,y) && has_changed(h, x, y)) {
+        if (bigHex[h].hexExists(x,y)) {
           bigHex[h].hexes[x][y].draw();
         }
       }
@@ -240,7 +226,7 @@ class Hex {
     this.pix_x = pixel.x;
     this.pix_y = pixel.y;
     this.LED = GetLightFromCoord(x, y);
-    this.c = get_rgb_color(255, 255, 255);
+    this.c = get_hsv_color(0, 0, 255);
     this.exists = (this.LED != -1);
     
     int[] coords = new int[2];
@@ -268,7 +254,7 @@ class Hex {
   
   void draw() {
     // Draw the hexagon and fill it with color
-    fill(get_red(this.c), get_green(this.c), get_blue(this.c));
+    fill(get_hue(this.c), get_sat(this.c), get_val(this.c));
     stroke(0);
     
     // This is hugely expensive
@@ -310,7 +296,6 @@ class Hex {
 //  Server Routines
 //
 void pollServer() {
-  // Read 2 different server ports into 2 buffers - keep channels separated
   try {
     Client c = _server.available();
     // append any available bytes to the buffer
@@ -333,9 +318,9 @@ void pollServer() {
 }
 
 //
-// processCommand - process 6 integers as (h, x, y, int rgb)
+// processCommand - process 6 integers as (h, x, y, int hsv)
 // x and y are +5 offset, so to be always positive
-//
+
 // 4 comma-separated numbers for i, x, y, color
 //
 Pattern cmd_pattern = Pattern.compile("^\\s*(\\d+),(\\d+),(\\d+),(\\d+)\\s*$");
@@ -348,79 +333,33 @@ void processCommand(String cmd) {
     println("ignoring input for " + cmd);
     return;
   }
-  byte i  =    Byte.valueOf(m.group(1));
+  byte h  =    Byte.valueOf(m.group(1));
   byte x  =    Byte.valueOf(m.group(2));  // 0+ (do the offset just before sending)
   byte y  =    Byte.valueOf(m.group(3));  // 0+ (do the offset just before sending)
-  int rgb = Integer.valueOf(m.group(4));
+  int hsv = Integer.valueOf(m.group(4));
   
-  next_buffer[i][x][y] = rgb;  
-//  println(String.format("setting hex %d coord:%d,%d to r:%d, g:%d, b:%d", i, x, y, get_red(hsv), get_green(hsv), get_blue(hsv)));
-}
-
-//
-// has_changed - is the next buffer different from the current buffer?
-//
-boolean has_changed(int h, byte x, byte y) {
-  return curr_buffer[h][x][y] != next_buffer[h][x][y];
-}
-
-
-//
-// pushFrame
-//
-void pushFrame() {
-  for (byte h = 0; h < NUM_HEXES; h++) {
-    for (byte x = 0; x < PIXEL_WIDTH; x++) {
-      for (byte y = 0; y < PIXEL_WIDTH; y++) {
-        curr_buffer[h][x][y] = next_buffer[h][x][y];
-      }
-    }
+  if (bigHex[h].hexExists(x,y)) {
+    bigHex[h].hexes[x][y].setColor(hsv);
+    bigHex[h].hexes[x][y].draw();
   }
+          
+//  println(String.format("setting hex %d coord:%d,%d to h:%d, s:%d, v:%d", h, x, y, get_hue(hsv), get_sat(hsv), get_val(hsv)));
 }
 
 
-  
-void initializeColorBuffers() {
-  int black = get_rgb_color(0, 0, 0);
-  int gray = get_rgb_color(1, 1, 1);
-  
-  for (byte h = 0; h < NUM_HEXES; h++) {
-    for (byte x = 0; x < PIXEL_WIDTH; x++) {
-      for (byte y = 0; y < PIXEL_WIDTH; y++) {
-        if (bigHex[h].hexExists(x,y)) {
-          curr_buffer[h][x][y] = black;
-          next_buffer[h][x][y] = gray;
-        }
-      }
-    }
-  }
+int get_hsv_color(int h, int s, int v) {
+  return h << 16 | s << 8 | v;
 }
 
-void pushColorBuffer(byte c) {
-  for (byte h = 0; h < NUM_HEXES; h++) {
-    for (byte x = 0; x < PIXEL_WIDTH; x++) {
-      for (byte y = 0; y < PIXEL_WIDTH; y++) {
-        if (bigHex[h].hexExists(x,y)) {
-          curr_buffer[h][x][y] = next_buffer[h][x][y];
-        }
-      }
-    }
-  }
-}
-
-int get_rgb_color(int r, int g, int b) {
-  return r << 16 | g << 8 | b;
-}
-
-short get_red(int c) {
+short get_hue(int c) {
   return (short)(c >> 16 & 0xFF);
 }
 
-short get_green(int c) {
+short get_sat(int c) {
   return (short)(c >> 8 & 0xFF);
 }
 
-short get_blue(int c) {
+short get_val(int c) {
   return (short)(c & 0xFF);
 }
 
@@ -434,5 +373,3 @@ void print_memory_usage() {
     println("Memory in use: " + inUseMb + "Mb");
   }  
 }
-
-

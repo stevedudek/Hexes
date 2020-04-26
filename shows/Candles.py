@@ -21,7 +21,7 @@ class Candle(object):
     def draw_candle(self, candle_color, wind):
 
         # Draw glow
-        glow_size = self.height / 2
+        glow_size = int(self.height / 2)
         glow_cent = self.get_wick() if wind == 10 else hex_in_direction(self.get_wick(), wind)
         self.hexes.set_cell(glow_cent, rgb_to_hsv((200, 200, 0)))
 

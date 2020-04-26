@@ -57,7 +57,5 @@ class Balls(object):
                 if not b.decrease_life():
                     self.balls.remove(b)
 
-            self.hexes.go()
-
             yield self.speed
 

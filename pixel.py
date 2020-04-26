@@ -7,7 +7,7 @@ A Pixel knows coordinates: (h, x, y) coordinate, (strip, LED) coordinate, DMX ad
               colors: current-frame color, next-frame color, interp color, (x2 if dual channel)
 Pulling the layout logic out of Processing and into this class
 """
-import color as color
+import color as color_func
 
 # Convert (x, y) coordinate into LED position. Includes buffer LEDs.
 LED_LOOKUP = [
@@ -33,9 +33,9 @@ class Pixel(object):
     def __init__(self, h, x, y):
         self.h, self.x, self.y = h, x, y  # h = hex number = strip = universe
         self.led = self.get_led()
-        self.curr_frame = color.almost_black()
-        self.next_frame = color.black()
-        self.interp_frame = color.black()
+        self.curr_frame = color_func.almost_black()
+        self.next_frame = color_func.black()
+        self.interp_frame = color_func.black()
 
     def get_coord(self):
         return self.h, self.x, self.y
@@ -48,7 +48,7 @@ class Pixel(object):
         return self.led != -1
 
     def has_changed(self):
-        return color.are_different(self.curr_frame, self.next_frame)
+        return color_func.are_different(self.curr_frame, self.next_frame)
 
     def set_color(self, color):
         self.next_frame = color
@@ -59,24 +59,19 @@ class Pixel(object):
     def set_curr_frame(self, color):
         self.curr_frame = color
 
-    # def push_current_to_interp_frame(self):
-    #     self.interp_frame = self.curr_frame
-
-    # def push_next_to_interp_frame(self):
-    #     self.interp_frame = self.next_frame
-
     def interpolate_frame(self, fraction):
-        self.interp_frame = color.interp_color(self.curr_frame, self.next_frame, fraction)
+        interp_frame = color_func.interp_color(self.curr_frame, self.next_frame, fraction)
+        self.interp_frame = interp_frame
 
     def set_black(self):
-        self.next_frame = color.black()
+        self.set_color(color_func.black())
 
     def force_black(self):
-        self.curr_frame = color.almost_black()
+        self.curr_frame = color_func.almost_black()
         self.set_black()
 
     def push_next_to_current_frame(self):
-        self.next_frame = self.curr_frame
+        self.curr_frame= self.next_frame
 
     def get_led(self):
         """Convert (h, x, y) coordinate to (strip, led) coordinate"""

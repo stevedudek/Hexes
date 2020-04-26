@@ -1,81 +1,69 @@
 """
-Model to communicate with a Hex simulator over a TCP socket
+Simulator sends colors to the Processing visualizer
+Simulator use its own 1 Hex model composed of pixels to keep track of simulator current and next frames
+All the simulator logic is here
+On the receiving end, Processing does no calculations, just turning on hexes with colors as the messages arrive
+Sending simulator frame rate is in go_dmx.py, ChannelRunner.__init__():
+  self.simulator = SimulatorModel(frame_rate=10, hostname="localhost", port=4444) if has_simulator else None
+Frame rate will throttle how fast Processing gets updates, but should not affect LED lighting,
+unless the Processing drawing is slow and expensive
 
 """
+import datetime
 import socket
-from HelperFunctions import byte_clamp
-from color import color_to_int
-from hex import HEX_OFFSET
+
+from hex import Hex
+import color as color_func
 
 
 class SimulatorModel(object):
-    def __init__(self, hostname, channel, port=4444, debug=False):
+    def __init__(self, frame_rate, hostname="localhost", port=4444):
+        self.frame_rate = frame_rate
+        self.last_update = datetime.datetime.now()
+        self.next_update = self._get_next_update()
         self.server = (hostname, port)
-        self.channel = channel  # Which of 2 channels
-        self.debug = debug
         self.sock = None
-        self.dirty = {}  # { coord: color } map to be sent on the next call to "go"
+        self.hex_model = Hex()  # This hex model of pixels is unique to the Simulator
         self.connect()
 
     def connect(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect(self.server)
 
-    def __repr__(self):
-        return "Hex Model Channel {} ({}, port={}, debug={})".format(self.channel, self.server[0], self.server[1],
-                                                                     self.debug)
+    def _get_next_update(self):
+        return self.last_update + datetime.timedelta(seconds=1.0 / self.frame_rate)
 
-    def get_channel(self):
-        return self.channel
+    def _needs_update(self):
+        """Does the Simulator need updating?"""
+        return datetime.datetime.now() > self.next_update
 
-    # Model basics
-
-    def set_cell(self, cell, color):
-        """Set the model's coord to a color"""
-        self.dirty[cell] = color
+    def set(self, coord, color):
+        """Set the coord's next_frame to color"""
+        self.hex_model.set_cell(coord, color)
 
     def go(self):
-        """Send all of the buffered commands
-           At the very-last minute, an offset needs to be added to the coordinates to keep positive"""
-        self.send_start()
-        for (coord, color) in self.dirty.items():
-            (h, x, y) = coord
-            x += HEX_OFFSET
-            y += HEX_OFFSET
-            hsb_int = color_to_int(byte_clamp(color[0], wrap=True), byte_clamp(color[1]), byte_clamp(color[2]))
-            msg = "{}{},{},{},{}".format(self.channel, h, x, y, hsb_int)
+        """If the frame is up, push all changed pixels to the simulator"""
+        if self._needs_update():
+            self._send_pixels()
+            self.hex_model.push_next_to_current_frame()
+            self.last_update = datetime.datetime.now()
+            self.next_update = self._get_next_update()
 
-            if self.debug:
-                print (msg)
-            self.sock.send(msg)
-            self.sock.send('\n')
+    def _send_pixels(self):
+        """Send all of the changed pixels to the visualizer"""
+        for pixel in self.hex_model.all_onscreen_pixels():
+            if pixel.has_changed():
+                # h, x, y = pixel.get_coord()
+                # r, g, b = color_func.hsv_to_rgb(pixel.next_frame)
+                # rgb_int = color_func.color_to_int(r, g, b)  # ToDo: change this to rgb
 
-        self.dirty = {}  # Restart the dirty dictionary
+                h, x, y = pixel.get_coord()
+                hue, sat, val = pixel.next_frame
+                hsv_int = color_func.color_to_int(hue, sat, val)
 
-    def send_start(self):
-        """send a start signal"""
-        msg = "{}X".format(self.channel)  # tell processing that commands are coming
+                msg = "{},{},{},{}".format(h, x + 5, y + 5, hsv_int)
+                msg += "\n"
+                # print(msg)
+                self.sock.sendto(msg.encode(), self.server)
 
-        if self.debug:
-            print (msg)
-        self.sock.send(msg)
-        self.sock.send('\n')
-
-    def send_delay(self, delay):
-        """send a morph amount in milliseconds"""
-        msg = "{}D{}".format(self.channel, str(int(delay * 1000)))
-
-        if self.debug:
-            print (msg)
-        self.sock.send(msg)
-        self.sock.send('\n')
-
-    def send_intensity(self, intensity):
-        """send an intensity amount (0-255)"""
-        msg = "{}I{}".format(self.channel, str(intensity))
-
-        if self.debug:
-            print (msg)
-        self.sock.send('\n')
-        self.sock.send(msg)
-        self.sock.send('\n')
+                # self.sock.send('\n'.encode(), self.server)

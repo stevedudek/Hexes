@@ -98,7 +98,6 @@ class Storm(object):
 
             if helpfunc.one_in(100):
                 self.hexes.set_all_cells(rgb_to_hsv((255, 255, 127)))
-                self.hexes.go()
                 yield 0.3
 
             # draw bolt lighting - a bolt is just a quickly-moving raindrop that does not erase
@@ -107,7 +106,7 @@ class Storm(object):
 
                 # set background to dark blue
                 self.hexes.set_all_cells(rgb_to_hsv((0, 0, 127)))  # Dark blue background
-                self.hexes.go()
+                yield 0.05
 
                 for _ in range(randint(1 * helpfunc.NUM_HEXES, 3 * helpfunc.NUM_HEXES)):  # number of lighting bolts
                     self.bolts.append(Raindrop(hexmodel=self.hexes, color=rgb_to_hsv((255, 255, 0)), direction=5))
@@ -128,7 +127,7 @@ class Storm(object):
                         if not bolt.move_drop():  # Drop off screen
                             self.bolts.remove(bolt)
 
-                    self.hexes.go()
+                    yield 0.05
 
                 self.bolts = []  # need to clear bolts
 
