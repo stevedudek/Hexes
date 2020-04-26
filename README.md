@@ -11,7 +11,7 @@
 
 ### Overview
 
-This Hex Repository controls 1-4 panels of 109 wd2801 RGB LEDs via a DMX King
+This Hex Repository controls 1-4 panels of 109 wd2801 RGB LEDs via a DMX King.
 For viewing at home, the user can turn on a Processing visualizer.
 
 ### How to use
