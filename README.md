@@ -38,22 +38,23 @@ set up the pyramidtriangles *ve* with Python 3.6+
 
 #### The Problem
 
-For about a decade, I've been invested in an LED technology stack of
+For about a decade, I've invested in an LED technology stack of
 * LEDs
 * Pixel Pusher Hardware
 * Processing software and visualizer
 * Python show runner
 * Laptop
-The Pixel Pusher robustly handles power distribution, but currently is dependant on Processing to send it LED signals.
-Not only is Processing potentially slow (limited to 30-60 frames per second),
-but also I'm having trouble installing Processing on a Raspberry Pi, requiring thus a laptop.
+
+The Pixel Pusher robustly handles power distribution, but currently the Pixel Pusher depends on Processing to send it LED signals.
+Not only is Processing potentially slow (limited to 30-50 frames per second),
+but also I'm having trouble installing Processing on a Raspberry Pi, requiring a laptop instead.
 A DMX King (thanks, John Major) may free up this technological barrier.
 
 #### Initial Goals
 
 0. Rip out most of the Pyramid Triangles code, so I can understand the simplest pieces
 1. Get the DMX King to talk to a new (actually old) type of LED: RGB ws2801
-2. Get Python LED shows to work with the DMX King
+2. Get previously-written Python LED shows to work with the DMX King
 3. Add a few LED features: frame interpolation, dual-show running
 4. Bring back an optional Processing visualizer for debugging and LED-free running
 
@@ -61,13 +62,13 @@ A DMX King (thanks, John Major) may free up this technological barrier.
 
 * This Hex repository is not written (yet) for the Pyramid's Triangles
 * Much of the Pyramid functionality is gone: flexible LED/strip mapping, Cherry Pi, abstract classes
-* You may find such stripped-down limitations currently aggravation
+* You may find such stripped-down limitations aggravating
 
 #### The Good
 
-* The code base is a lot simpler and could be easier upon which to build
-* Supports **frame interpolation**: for example, if a LED show yields for 1 second, the ChannelRunner within go_dmx.py knows to interpolate all LEDs at ~60 fps.
-* Supports **dual channels**: the code natively runs two random shows at once, staggered, blending them together
+* The code base is a lot simpler for me to build back in functionality
+* Supports **frame interpolation**: for example, if a LED show yields for 1 second, the ChannelRunner within *go_dmx.py* knows to interpolate all LEDs at ~60 fps.
+* Supports **dual channels**: the code natively runs two random shows at once, staggered, blending them together,
 
 #### Next Steps
 
