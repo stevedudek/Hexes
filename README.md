@@ -34,6 +34,8 @@ set up the pyramidtriangles *ve* with Python 3.6+
 ./go_dmx.py --simulator --dmxoff --onechannel  # turn off dual channels
 ```
 
+The Processing simulator, **HexSimulatorOnly**, runs with either Processing 2 or 3 (you will need to change one code line)
+
 ### Goals
 
 #### The Problem
