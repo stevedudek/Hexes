@@ -21,18 +21,18 @@ Either a laptop or Raspberry Pi (not tested yet) connects to the DMX King via in
 
 clone the repository:
 
-`code`
+```
 git clone https://github.com/stevedudek/Hexes.git
-`code`
+```
 
 set up the pyramidtriangles *ve* with Python 3.6+
 
-`code`
+```
 ./go_dmx.py --bind 192.168.0.119  # run Hex code to the DMX King
 ./go_dmx.py --simulator --bind 192.168.0.119  # turn on simulator and DMX King
 ./go_dmx.py --simulator --dmxoff  # run only the Processing simulator
 ./go_dmx.py --simulator --dmxoff --onechannel  # turn off dual channels
-`code`
+```
 
 ### Goals
 
