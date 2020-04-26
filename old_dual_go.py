@@ -12,7 +12,7 @@ import shows
 #    Enabled by two instances of the ShowRunner object
 #    HexServer's self.channel is now self.channels
 #
-#  Cleaning up go.py Nov 2018
+#  Cleaning up old_go.py Nov 2018
 #
 #  ripping out OSC controller, queue
 #

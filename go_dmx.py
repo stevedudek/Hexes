@@ -372,7 +372,7 @@ if __name__ == '__main__':
     parser.add_argument('--bind', help='Local address to use for sACN')
     parser.add_argument('--simulator', action='store_true', default=False, help='use the processing simulator')
     parser.add_argument('--dmxoff', action='store_true', default=False, help='turn off the DMX controller')
-    parser.add_argument('--onechannel', action='store_true', default=False, help='turn off the DMX controller')
+    parser.add_argument('--onechannel', action='store_true', default=False, help='remove dual shows')
     parser.add_argument('shows', metavar='show_name', type=str, nargs='*',
                         help='name of show (or shows) to run')
 
