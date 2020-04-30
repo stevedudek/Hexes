@@ -100,13 +100,13 @@ def change_color(hsv, amount):
 
 
 def interp_color(hsv1, hsv2, fraction):
-    """Interpolate between hsv1 and hsv2"""
+    """Interpolate between hsv1 (fract 0) and hsv2 (fract 1.0) """
     if fraction <= 0:
         return hsv1
     elif fraction >= 1:
         return hsv2
-    # elif not are_different(hsv1, hsv2):
-    #     return hsv1
+    elif not are_different(hsv1, hsv2):
+        return hsv1
     elif hsv1[2] == 0:  # 1 is black, so dim 2
         return dim_color(hsv2, fraction)
     elif hsv2[2] == 0:  # 2 is black, so dim 1
@@ -114,7 +114,12 @@ def interp_color(hsv1, hsv2, fraction):
     else:
         return interp_value(hsv1[0], hsv2[0], fraction), \
                interp_value(hsv1[1], hsv2[1], fraction), \
-               interp_value(hsv1[2], hsv2[2], fraction),
+               interp_value(hsv1[2], hsv2[2], fraction)
+
+
+def mix_color_and_texture(hsv1, hsv2, fraction):
+    """Get color from hsv1 and value from hsv2"""
+    return hsv1[0], hsv1[1], interp_value(hsv1[2], hsv2[2], 1 - fraction)
 
 
 def interp_value(v1, v2, fraction):

@@ -1,7 +1,7 @@
 from random import randint
 from HelperFunctions import one_in, rand_dir, hex_ring, hex_in_direction
 from color import random_color, random_color_range, gradient_wheel
-
+from hex import NUM_HEXES
 
 class Ball(object):
     def __init__(self, hexmodel, maincolor):
@@ -36,7 +36,7 @@ class Balls(object):
         self.name = "Balls"
         self.hexes = hexmodel
         self.balls = []	 # List that holds Balls objects
-        self.speed = 1.0 / randint(1, 10)
+        self.speed = 1.0 / randint(4, 10)
         self.maincolor = random_color()  # Main color of the show
 
     def next_frame(self):
@@ -44,7 +44,7 @@ class Balls(object):
         while True:
 
             # Check how many balls are in play
-            if not self.balls or (len(self.balls) < 3 and one_in(25)):
+            if not self.balls or (len(self.balls) < (3 * NUM_HEXES) and one_in(25)):
                 self.balls.append(Ball(self.hexes, self.maincolor))
 
             self.hexes.black_all_cells()

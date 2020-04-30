@@ -18,7 +18,16 @@ from model.simulator import SimulatorModel  # Sends signals to Processing screen
 #    Enabled by two instances of the ShowRunner object
 #    HexServer's self.channel is now self.channels
 #
-#  4/20/2020
+#  TWO SHOW TYPES: 'texture' or 'color'
+#
+#  Channel 0: only 'color'
+#  Channel 1: only 'texture'
+#
+#  Always be fadin'
+#
+#  Interpolation is weird: hue0, sat0, val1 (possibly interpolate the value)
+#
+#  4/27/2020
 #
 #  Sending singles to the DMX controller
 #
@@ -64,7 +73,7 @@ from model.simulator import SimulatorModel  # Sends signals to Processing screen
 
 
 SHOW_TIME = 30  # Time of shows in seconds
-FADE_TIME =  1  # Fade In + Out times in seconds. If FADE_TIME == SHOW_TIME, then "always be fading"
+FADE_TIME = 30  # Fade In + Out times in seconds. If FADE_TIME == SHOW_TIME, then "always be fading"
 SPEED_MULT = 1  # Multiply every delay by this value. Higher = much slower shows.
 
 
@@ -115,7 +124,6 @@ class ChannelRunner(object):
 
         else:
             # One Channel just dumps the single channel
-            print("one channel")
             for pixel in self.channels[0].hex_model.all_onscreen_pixels():
                 dimmed_interp_color = color.dim_color(pixel.interp_frame, fract_channel1)
                 if self.dmx_runner is not None:
@@ -214,8 +222,9 @@ class ShowRunner(threading.Thread):
         self.time_frame_end = datetime.datetime.now()
 
         # map of names -> show constructors
-        self.shows = dict(shows.load_shows())
-        self.randseq = shows.random_shows()
+        show_channel = channel if not self.one_channel else None
+        self.shows = dict(shows.load_shows(show_channel))
+        self.randseq = shows.random_shows(show_channel)
 
         # current show object & frame generator
         self.show = None
@@ -381,7 +390,7 @@ if __name__ == '__main__':
 
     if args.list:
         print ("Available shows:")
-        print (', '.join([show[0] for show in shows.load_shows(channel=None, path=None)]))
+        print (', '.join([show[0] for show in shows.load_shows(channel=None)]))
         sys.exit(0)
 
     num_channels = 2 if not args.onechannel else 1
