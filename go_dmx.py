@@ -64,7 +64,7 @@ from model.simulator import SimulatorModel  # Sends signals to Processing screen
 
 
 SHOW_TIME = 30  # Time of shows in seconds
-FADE_TIME =  1  # Fade In + Out times in seconds. If FADE_TIME == SHOW_TIME, then "always be fading"
+FADE_TIME = 1  # Fade In + Out times in seconds. If FADE_TIME == SHOW_TIME, then "always be fading"
 SPEED_MULT = 1  # Multiply every delay by this value. Higher = much slower shows.
 
 
@@ -96,7 +96,7 @@ class ChannelRunner(object):
         for channel in self.channels:
             channel.set_interp_frame()  # Set the interp_frames
 
-        fract_channel1 = self.channels[0].get_show_intensity()  # 0.0-1.0
+        fract_channel1 = color.get_ease_in_out_cubic(self.channels[0].get_show_intensity())  # 0.0-1.0
 
         if not self.one_channel:
             channel1_hex_model, channel2_hex_model = self.channels[0].hex_model, self.channels[1].hex_model
@@ -136,11 +136,11 @@ class ChannelRunner(object):
         """Check and flip the trigger switch to reset channel 2's show"""
         channel_0_show_fract = self.channels[0].show_runner.show_runtime / self.max_show_time  # 0-2
 
-        if not self.reset_channel_2 and (0.5 < channel_0_show_fract < 1.0):
+        if not self.reset_channel_2 and (0.5 <= channel_0_show_fract < 1.0):
             self.channels[1].show_runner.force_next_show()
             self.reset_channel_2 = True
 
-        if self.reset_channel_2 and (1.5 < channel_0_show_fract < 2.0):
+        if self.reset_channel_2 and (1.25 < channel_0_show_fract < 2.0):
             self.reset_channel_2 = False
 
 
