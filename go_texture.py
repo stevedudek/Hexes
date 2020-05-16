@@ -86,8 +86,8 @@ from model.simulator import SimulatorModel  # Sends signals to Processing screen
 #  Why HSV? Because it makes 2-color interpolation simpler and cleaner (interpolated RGB is muddy)
 
 
-SHOW_TIME =  4  # Time of shows in seconds
-FADE_TIME =  1  # Fade In + Out times in seconds. If FADE_TIME == SHOW_TIME, then "always be fading"
+SHOW_TIME = 20  # Time of shows in seconds
+FADE_TIME =  4  # Fade In + Out times in seconds. If FADE_TIME == SHOW_TIME, then "always be fading"
 SPEED_MULT = 1  # Multiply every delay by this value. Higher = much slower shows.
 
 
