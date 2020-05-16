@@ -86,8 +86,8 @@ from model.simulator import SimulatorModel  # Sends signals to Processing screen
 #  Why HSV? Because it makes 2-color interpolation simpler and cleaner (interpolated RGB is muddy)
 
 
-SHOW_TIME = 20  # Time of shows in seconds
-FADE_TIME =  4  # Fade In + Out times in seconds. If FADE_TIME == SHOW_TIME, then "always be fading"
+SHOW_TIME = 30  # Time of shows in seconds
+FADE_TIME =  5  # Fade In + Out times in seconds. If FADE_TIME == SHOW_TIME, then "always be fading"
 SPEED_MULT = 1  # Multiply every delay by this value. Higher = much slower shows.
 
 
@@ -426,7 +426,7 @@ if __name__ == '__main__':
     dmx_runner = get_dmx_runner(args.bind) if not args.dmxoff else None
 
     channel_runner = ChannelRunner(channels=set_up_channels(num_channels, args.max_time), dmx_runner=dmx_runner,
-                                   has_simulator=args.simulator, max_show_time = args.max_time)
+                                   has_simulator=args.simulator, max_show_time=SHOW_TIME)
     channel_runner.start()
 
     try:
