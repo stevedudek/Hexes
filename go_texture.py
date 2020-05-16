@@ -90,7 +90,6 @@ SHOW_TIME = 20  # Time of shows in seconds
 FADE_TIME = 10  # Fade In + Out times in seconds. If FADE_TIME == SHOW_TIME, then "always be fading"
 SPEED_MULT = 1  # Multiply every delay by this value. Higher = much slower shows.
 
-# Because of easing, FADE_TIME feels twice as fast
 
 class ChannelRunner(object):
     """1. Morph each channel between current and next frames
@@ -152,6 +151,8 @@ class ChannelRunner(object):
         if self.simulator:
             self.simulator.go()  # Try to dump signals to visualizer
 
+        time.sleep(1.0 / 50)  # in seconds  ToDo: Remove!
+        
     def stop(self):
         for channel in self.channels:
             channel.stop()
@@ -224,7 +225,7 @@ class ShowRunner(threading.Thread):
        Get frames from the Python shows
        Puts those frames on to Hex Model"""
     def __init__(self, model, channel=0, one_channel=True, max_show_time=60):
-        super(ShowRunner, self).__init__(name="ShowRunner")
+        super(ShowRunner, self).__init__(name="ShowRunner")  # set up the thread
         self.model = model  # Hex class within hex.py
         self.running = True
         self.max_show_time = max_show_time
