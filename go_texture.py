@@ -21,12 +21,12 @@ from model.simulator import SimulatorModel  # Sends signals to Processing screen
 #   DA: Blue
 #   V+: Red
 #
-#  Network
-#  -------
-#  IP Address: 192.168.0.118
+#  To connect from a laptop
+#  ------------------------
+#  IP Address: 192.168.0.118 (try 192.168.0.4 too - need to alternate)
 #  Subnet Mask: 255.255.0.0
 #  TURN OFF THE WIFI
-#  ./go_dmx.py --bind 192.168.0.118
+#  ./go_dmx.py --bind 192.168.0.118 (try 192.168.0.4 too - need to alternate)
 #
 #  Dual Shows running that fade into each other
 #    Enabled by two instances of the ShowRunner object
@@ -86,10 +86,11 @@ from model.simulator import SimulatorModel  # Sends signals to Processing screen
 #  Why HSV? Because it makes 2-color interpolation simpler and cleaner (interpolated RGB is muddy)
 
 
-SHOW_TIME = 30  # Time of shows in seconds
-FADE_TIME =  5  # Fade In + Out times in seconds. If FADE_TIME == SHOW_TIME, then "always be fading"
+SHOW_TIME = 20  # Time of shows in seconds
+FADE_TIME = 10  # Fade In + Out times in seconds. If FADE_TIME == SHOW_TIME, then "always be fading"
 SPEED_MULT = 1  # Multiply every delay by this value. Higher = much slower shows.
 
+# Because of easing, FADE_TIME feels twice as fast
 
 class ChannelRunner(object):
     """1. Morph each channel between current and next frames
@@ -119,10 +120,9 @@ class ChannelRunner(object):
         for channel in self.channels:
             channel.set_interp_frame()  # Set the interp_frames
 
-        # fract_channel1 = color.get_ease_in_out_cubic(self.channels[0].get_show_intensity())  # 0.0-1.0
-        fract_channel1 = self.channels[0].get_show_intensity()  # 0.0-1.0
-
         if not self.one_channel:
+            # ease in-out cubic works; keep it, but does not interact well with dimming
+            fract_channel1 = color.get_ease_in_out_cubic(self.channels[0].get_show_intensity())  # 0.0-1.0
             channel1_hex_model, channel2_hex_model = self.channels[0].hex_model, self.channels[1].hex_model
 
             # Two Channels require channel interpolation
@@ -140,6 +140,7 @@ class ChannelRunner(object):
         else:
             # One Channel just dumps the single channel
             for pixel in self.channels[0].hex_model.all_onscreen_pixels():
+                fract_channel1 = self.channels[0].get_show_intensity()  # 0.0-1.0
                 dimmed_interp_color = color.dim_color(pixel.interp_frame, fract_channel1)
                 if self.dmx_runner is not None:
                     self.dmx_runner.set(pixel, dimmed_interp_color)  # Queue up one pixel's DMX signal
@@ -422,7 +423,12 @@ if __name__ == '__main__':
         print (', '.join([show[0] for show in shows.load_shows(channel=None)]))
         sys.exit(0)
 
-    num_channels = 2 if not args.onechannel else 1
+    if args.onechannel:
+        num_channels = 1
+        FADE_TIME = max([FADE_TIME, SHOW_TIME / 2.0])
+    else:
+        num_channels = 2
+
     dmx_runner = get_dmx_runner(args.bind) if not args.dmxoff else None
 
     channel_runner = ChannelRunner(channels=set_up_channels(num_channels, args.max_time), dmx_runner=dmx_runner,

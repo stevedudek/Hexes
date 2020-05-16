@@ -103,9 +103,9 @@ class ChannelRunner(object):
         for channel in self.channels:
             channel.set_interp_frame()  # Set the interp_frames
 
-        fract_channel1 = color.get_ease_in_out_cubic(self.channels[0].get_show_intensity())  # 0.0-1.0
-
         if not self.one_channel:
+            # ease in-out cubic works; keep it, but does not interact well with dimming
+            fract_channel1 = color.get_ease_in_out_cubic(self.channels[0].get_show_intensity())  # 0.0-1.0
             channel1_hex_model, channel2_hex_model = self.channels[0].hex_model, self.channels[1].hex_model
 
             # Two Channels require channel interpolation
@@ -122,8 +122,8 @@ class ChannelRunner(object):
 
         else:
             # One Channel just dumps the single channel
-            print("one channel")
             for pixel in self.channels[0].hex_model.all_onscreen_pixels():
+                fract_channel1 = self.channels[0].get_show_intensity()  # 0.0-1.0
                 dimmed_interp_color = color.dim_color(pixel.interp_frame, fract_channel1)
                 if self.dmx_runner is not None:
                     self.dmx_runner.set(pixel, dimmed_interp_color)  # Queue up one pixel's DMX signal
@@ -325,6 +325,10 @@ class ShowRunner(threading.Thread):
     def get_show_intensity(self):
         """Return a 0-1 intensity (off -> on) depending on where
            show_runtime is along towards max_show_time"""
+        return self.get_one_channel_show_intensity() if self.one_channel else self.get_two_channel_show_intensity()
+
+    def get_two_channel_show_intensity(self):
+        """Two-channel shows go to 2 x max_show_time"""
         if self.show_runtime <= FADE_TIME:
             intensity = self.show_runtime / float(FADE_TIME)
         elif self.show_runtime <= self.max_show_time:
@@ -333,6 +337,16 @@ class ShowRunner(threading.Thread):
             intensity = 1.0 - ((self.show_runtime - self.max_show_time) / float(FADE_TIME))
         else:
             intensity = 0  # For 2-channel running, the second half of a show's run time will be dark
+        return intensity
+
+    def get_one_channel_show_intensity(self):
+        """One-channel shows go to 1 x max_show_time"""
+        if self.show_runtime <= FADE_TIME:
+            intensity = self.show_runtime / float(FADE_TIME)
+        elif self.show_runtime >= self.max_show_time - FADE_TIME:
+            intensity = (self.max_show_time - self.show_runtime) / float(FADE_TIME)
+        else:
+            intensity = 1
         return intensity
 
 
@@ -391,7 +405,12 @@ if __name__ == '__main__':
         print (', '.join([show[0] for show in shows.load_shows(channel=None, path=None)]))
         sys.exit(0)
 
-    num_channels = 2 if not args.onechannel else 1
+    if args.onechannel:
+        num_channels = 1
+        FADE_TIME = max([FADE_TIME, SHOW_TIME / 2.0])
+    else:
+        num_channels = 2
+
     dmx_runner = get_dmx_runner(args.bind) if not args.dmxoff else None
 
     channel_runner = ChannelRunner(channels=set_up_channels(num_channels, args.max_time), dmx_runner=dmx_runner,

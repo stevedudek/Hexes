@@ -112,7 +112,7 @@ def interp_color(hsv1, hsv2, fraction):
     elif hsv2[2] == 0:  # 2 is black, so dim 1
         return dim_color(hsv1, 1 - fraction)
     else:
-        return interp_value(hsv1[0], hsv2[0], fraction), \
+        return  interp_wrap(hsv1[0], hsv2[0], fraction), \
                interp_value(hsv1[1], hsv2[1], fraction), \
                interp_value(hsv1[2], hsv2[2], fraction)
 
@@ -124,6 +124,22 @@ def mix_color_and_texture(hsv1, hsv2, fraction):
 
 def interp_value(v1, v2, fraction):
     return int(v1 + (fraction * (v2 - v1)))
+
+
+def interp_wrap(a, b, fraction):
+    if a >= b:
+        dist_clockwise = 256 + b - a
+        dist_counterclockwise = a - b
+    else:
+        dist_clockwise = b - a
+        dist_counterclockwise = 256 + a - b
+
+    if dist_clockwise <= dist_counterclockwise:
+        answer = a + (dist_clockwise * fraction)
+    else:
+        answer = a - (dist_counterclockwise * fraction)
+
+    return answer
 
 
 def are_different(color1, color2):
@@ -150,51 +166,32 @@ def restrict_color(hsv, hue, hue_range=0.05):
 
 
 def get_ease_in_out_cubic(value):
-    """Ease a 0.0 - 1.0 float cubically"""
-    ease_amount = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 6, 6, 6, 6, 6,
-                   9, 9, 9, 9, 12, 12, 12, 12, 15, 15, 15, 18, 18, 18, 19, 19, 19, 22, 22, 22, 25, 25,
-                   25, 26, 26, 29, 29, 32, 32, 32, 35, 33, 36, 36, 39, 39, 40, 40, 43, 43, 46, 46, 47,
-                   47, 50, 51, 51, 54, 54, 55, 58, 58, 61, 59, 62, 65, 65, 66, 69, 69, 70, 73, 71, 74,
-                   77, 78, 78, 79, 82, 83, 83, 86, 87, 90, 91, 91, 92, 95, 96, 99, 97, 100, 101, 102,
-                   105, 106, 109, 110, 111, 111, 112, 115, 116, 117, 120, 121, 122, 123, 126, 127, 128,
-                   129, 132, 133, 134, 135, 138, 139, 140, 141, 142, 146, 147, 148, 149, 150, 153, 154,
-                   155, 156, 158, 161, 162, 163, 164, 166, 167, 168, 169, 170, 174, 175, 176, 177, 179,
-                   180, 181, 182, 184, 185, 186, 188, 189, 190, 192, 193, 194, 196, 197, 199, 200, 201,
-                   203, 202, 206, 205, 206, 208, 209, 211, 212, 214, 213, 215, 216, 218, 219, 219, 220,
-                   222, 223, 223, 225, 226, 228, 227, 229, 230, 230, 232, 233, 233, 235, 234, 236, 238,
-                   237, 239, 239, 240, 240, 242, 241, 243, 243, 245, 244, 246, 246, 248, 247, 247, 249,
-                   249, 249, 250, 250, 250, 252, 252, 252, 252, 253, 253, 253, 253, 255, 255, 255, 255,
-                   255, 255, 255, 255, 255, 255, 255, 255]
+    """Ease in-out a 0.0 - 1.0 float cubically"""
+    # http://gizma.com/easing/
+    value *= 2
+    if value < 1:
+        return 0.5 * value * value * value
+    else:
+        value -= 2
+        return 0.5 * ((value * value * value) + 2)
 
-    return ease_amount[int(value * 255)] / 255.0
+
+def get_ease_in_cubic(value):
+    """Ease in a 0.0 - 1.0 float cubically"""
+    # http://gizma.com/easing/
+    return value * value * value
 
 
 def dim_color(hsv, amount):
-    """dim an hsv color by a 0-1.0 range. 0 == Black; 1 == Full Intensity """
-    dim_amount = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
-                  1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8,
-                  8, 8, 9, 9, 9, 10, 10, 11, 11, 12, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17,
-                  17, 18, 18, 19, 19, 20, 21, 21, 22, 22, 23, 24, 24, 25, 25, 26, 27, 27, 28, 29,
-                  29, 30, 31, 31, 32, 33, 34, 34, 35, 36, 37, 37, 38, 39, 40, 41, 41, 42, 43, 44,
-                  45, 45, 46, 47, 48, 49, 50, 51, 52, 53, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62,
-                  63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 76, 77, 78, 79, 80, 81, 82, 83,
-                  84, 86, 87, 88, 89, 90, 92, 93, 94, 95, 96, 98, 99, 100, 101, 103, 104, 105, 106,
-                  108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 123, 124, 125, 127, 128,
-                  130, 131, 132, 134, 135, 137, 138, 140, 141, 143, 144, 146, 147, 149, 150, 152,
-                  153, 155, 157, 158, 160, 161, 163, 164, 166, 168, 169, 171, 173, 174, 176, 178,
-                  179, 181, 183, 184, 186, 188, 189, 191, 193, 195, 196, 198, 200, 202, 203, 205,
-                  207, 209, 211, 212, 214, 216, 218, 220, 222, 224, 225, 227, 229, 231, 233, 235,
-                  237, 239, 241, 243, 245, 247, 249, 251, 253, 255]
-
-    if amount > 1 or amount < 0:
-        print(amount)
+    """ dim an hsv color by a 0-1.0 range. 0 == Black; 1 == Full Intensity """
+    # using a cubic easing in function
+    # http://gizma.com/easing/
     if amount >= 1:
         return hsv
     elif amount <= 0:
         return hsv[0], hsv[1], 0
     else:
-        # return hsv[0], hsv[1], hsv[2] * amount
-        return hsv[0], hsv[1], dim_amount[min([int(hsv[2] * amount), 255])]  # > 255 crashes the above array
+        return hsv[0], hsv[1], hsv[2] * get_ease_in_cubic(amount)
 
 
 def color_to_int(h, s, v):
