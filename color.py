@@ -193,8 +193,8 @@ def dim_color(hsv, amount):
     elif amount <= 0:
         return hsv[0], hsv[1], 0
     else:
-        return hsv[0], hsv[1], hsv[2] * amount
-        # return hsv[0], hsv[1], dim_amount[min([int(hsv[2] * amount), 255])]  # > 255 crashes the above array
+        # return hsv[0], hsv[1], hsv[2] * amount
+        return hsv[0], hsv[1], dim_amount[min([int(hsv[2] * amount), 255])]  # > 255 crashes the above array
 
 
 def color_to_int(h, s, v):
