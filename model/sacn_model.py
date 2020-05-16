@@ -11,7 +11,7 @@ class sACN(object):
         self.brightness = brightness
         self.sender = sacn.sACNsender(
             bind_address=bind_address,
-            universeDiscovery=False,
+            universeDiscovery=True,
         )
         self.leds = {}  # { h: 512 ints (3 for each LED) }
 

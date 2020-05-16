@@ -170,7 +170,7 @@ def get_ease_in_out_cubic(value):
 
 
 def dim_color(hsv, amount):
-    """dim an hsv color by a 0-1.0 range"""
+    """dim an hsv color by a 0-1.0 range. 0 == Black; 1 == Full Intensity """
     dim_amount = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
                   1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8,
                   8, 8, 9, 9, 9, 10, 10, 11, 11, 12, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17,
@@ -186,12 +186,15 @@ def dim_color(hsv, amount):
                   207, 209, 211, 212, 214, 216, 218, 220, 222, 224, 225, 227, 229, 231, 233, 235,
                   237, 239, 241, 243, 245, 247, 249, 251, 253, 255]
 
+    if amount > 1 or amount < 0:
+        print(amount)
     if amount >= 1:
         return hsv
     elif amount <= 0:
         return hsv[0], hsv[1], 0
     else:
-        return hsv[0], hsv[1], dim_amount[min([int(hsv[2] * amount), 255])]  # > 255 crashes the above array
+        return hsv[0], hsv[1], hsv[2] * amount
+        # return hsv[0], hsv[1], dim_amount[min([int(hsv[2] * amount), 255])]  # > 255 crashes the above array
 
 
 def color_to_int(h, s, v):

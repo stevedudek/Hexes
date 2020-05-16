@@ -14,6 +14,13 @@ from model.sacn_model import sACN  # Sends signals to DMX King
 from model.simulator import SimulatorModel  # Sends signals to Processing screen
 
 #
+#  DMX King wiring
+#  ---------------
+#  GND: Black
+#   CK: Green
+#   DA: Blue
+#   V+: Red
+#
 #  Dual Shows running that fade into each other
 #    Enabled by two instances of the ShowRunner object
 #    HexServer's self.channel is now self.channels

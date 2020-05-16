@@ -14,6 +14,20 @@ from model.sacn_model import sACN  # Sends signals to DMX King
 from model.simulator import SimulatorModel  # Sends signals to Processing screen
 
 #
+#  DMX King wiring
+#  ---------------
+#  GND: Black
+#   CK: Green
+#   DA: Blue
+#   V+: Red
+#
+#  Network
+#  -------
+#  IP Address: 192.168.0.118
+#  Subnet Mask: 255.255.0.0
+#  TURN OFF THE WIFI
+#  ./go_dmx.py --bind 192.168.0.118
+#
 #  Dual Shows running that fade into each other
 #    Enabled by two instances of the ShowRunner object
 #    HexServer's self.channel is now self.channels
@@ -72,8 +86,8 @@ from model.simulator import SimulatorModel  # Sends signals to Processing screen
 #  Why HSV? Because it makes 2-color interpolation simpler and cleaner (interpolated RGB is muddy)
 
 
-SHOW_TIME = 10  # Time of shows in seconds
-FADE_TIME = 10  # Fade In + Out times in seconds. If FADE_TIME == SHOW_TIME, then "always be fading"
+SHOW_TIME =  4  # Time of shows in seconds
+FADE_TIME =  1  # Fade In + Out times in seconds. If FADE_TIME == SHOW_TIME, then "always be fading"
 SPEED_MULT = 1  # Multiply every delay by this value. Higher = much slower shows.
 
 
@@ -105,7 +119,8 @@ class ChannelRunner(object):
         for channel in self.channels:
             channel.set_interp_frame()  # Set the interp_frames
 
-        fract_channel1 = color.get_ease_in_out_cubic(self.channels[0].get_show_intensity())  # 0.0-1.0
+        # fract_channel1 = color.get_ease_in_out_cubic(self.channels[0].get_show_intensity())  # 0.0-1.0
+        fract_channel1 = self.channels[0].get_show_intensity()  # 0.0-1.0
 
         if not self.one_channel:
             channel1_hex_model, channel2_hex_model = self.channels[0].hex_model, self.channels[1].hex_model
@@ -327,6 +342,10 @@ class ShowRunner(threading.Thread):
     def get_show_intensity(self):
         """Return a 0-1 intensity (off -> on) depending on where
            show_runtime is along towards max_show_time"""
+        return self.get_one_channel_show_intensity() if self.one_channel else self.get_two_channel_show_intensity()
+
+    def get_two_channel_show_intensity(self):
+        """Two-channel shows go to 2 x max_show_time"""
         if self.show_runtime <= FADE_TIME:
             intensity = self.show_runtime / float(FADE_TIME)
         elif self.show_runtime <= self.max_show_time:
@@ -335,6 +354,16 @@ class ShowRunner(threading.Thread):
             intensity = 1.0 - ((self.show_runtime - self.max_show_time) / float(FADE_TIME))
         else:
             intensity = 0  # For 2-channel running, the second half of a show's run time will be dark
+        return intensity
+
+    def get_one_channel_show_intensity(self):
+        """One-channel shows go to 1 x max_show_time"""
+        if self.show_runtime <= FADE_TIME:
+            intensity = self.show_runtime / float(FADE_TIME)
+        elif self.show_runtime >= self.max_show_time - FADE_TIME:
+            intensity = (self.max_show_time - self.show_runtime) / float(FADE_TIME)
+        else:
+            intensity = 1
         return intensity
 
 
@@ -348,6 +377,7 @@ def get_dmx_runner(bind_address):
                 if address['addr'].startswith('192.168.0'):
                     print("Auto-detected DMX King local IP: {}".format(address['addr']))
                     bind_address = address['addr']
+                    # bind_address = '192.168.0.118'  # This works
                     break
             if bind_address:
                 break
@@ -356,7 +386,6 @@ def get_dmx_runner(bind_address):
             print("Failed to auto-detect local DMX King IP")
 
     print("Starting sACN")
-
     dmx_runner = sACN(bind_address=bind_address, num_hexes=NUM_HEXES)
     dmx_runner.activate()
     return dmx_runner
