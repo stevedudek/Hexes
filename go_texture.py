@@ -380,7 +380,7 @@ def get_dmx_runner(bind_address):
                     bind_address = address['addr']
 
                     # ToDo: Remove this
-                    bind_address = choice(['192.168.0.118', '192.168.0.3', '192.168.0.6'])
+                    bind_address = choice(['192.168.0.118', bind_address])
 
                     break
             if bind_address:
