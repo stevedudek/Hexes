@@ -138,8 +138,7 @@ def interp_wrap(a, b, fraction):
         answer = a + (dist_clockwise * fraction)
     else:
         answer = a - (dist_counterclockwise * fraction)
-
-    return answer
+    return int(answer) % 256  # ToDo: is this correct?
 
 
 def are_different(color1, color2):
@@ -160,7 +159,7 @@ def restrict_color(hsv, hue, hue_range=0.05):
     # purple = 0.79
     # red purple = 0.92
 
-    hue_range = _float_to_byte(min[(hue_range, 0.5)])
+    hue_range = _float_to_byte(min([hue_range, 0.5]))
     _new_h = (hue - hue_range) + (hsv[0] * 2 * hue_range)
     return _new_h % 255, hsv[1], hsv[2]
 

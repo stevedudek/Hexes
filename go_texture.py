@@ -1,6 +1,7 @@
 #!/usr/bin/env python3.7
 import datetime
 import netifaces
+from random import choice
 import sys
 import time
 import traceback
@@ -86,8 +87,8 @@ from model.simulator import SimulatorModel  # Sends signals to Processing screen
 #  Why HSV? Because it makes 2-color interpolation simpler and cleaner (interpolated RGB is muddy)
 
 
-SHOW_TIME = 20  # Time of shows in seconds
-FADE_TIME = 10  # Fade In + Out times in seconds. If FADE_TIME == SHOW_TIME, then "always be fading"
+SHOW_TIME = 6  # Time of shows in seconds
+FADE_TIME = 1  # Fade In + Out times in seconds. If FADE_TIME == SHOW_TIME, then "always be fading"
 SPEED_MULT = 1  # Multiply every delay by this value. Higher = much slower shows.
 
 
@@ -138,8 +139,8 @@ class ChannelRunner(object):
 
         else:
             # One Channel just dumps the single channel
+            fract_channel1 = self.channels[0].get_show_intensity()  # 0.0-1.0
             for pixel in self.channels[0].hex_model.all_onscreen_pixels():
-                fract_channel1 = self.channels[0].get_show_intensity()  # 0.0-1.0
                 dimmed_interp_color = color.dim_color(pixel.interp_frame, fract_channel1)
                 if self.dmx_runner is not None:
                     self.dmx_runner.set(pixel, dimmed_interp_color)  # Queue up one pixel's DMX signal
@@ -151,8 +152,6 @@ class ChannelRunner(object):
         if self.simulator:
             self.simulator.go()  # Try to dump signals to visualizer
 
-        time.sleep(1.0 / 50)  # in seconds  ToDo: Remove!
-        
     def stop(self):
         for channel in self.channels:
             channel.stop()
@@ -379,7 +378,10 @@ def get_dmx_runner(bind_address):
                 if address['addr'].startswith('192.168.0'):
                     print("Auto-detected DMX King local IP: {}".format(address['addr']))
                     bind_address = address['addr']
-                    # bind_address = '192.168.0.118'  # This works
+
+                    # ToDo: Remove this
+                    bind_address = choice(['192.168.0.118', '192.168.0.3'])
+
                     break
             if bind_address:
                 break
@@ -429,6 +431,10 @@ if __name__ == '__main__':
         FADE_TIME = max([FADE_TIME, SHOW_TIME / 2.0])
     else:
         num_channels = 2
+
+    # ToDo: Remove this
+    num_channels = 1
+    FADE_TIME = max([FADE_TIME, SHOW_TIME / 2.0])
 
     dmx_runner = get_dmx_runner(args.bind) if not args.dmxoff else None
 

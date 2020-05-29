@@ -5,7 +5,7 @@ Model to communicate with a Hex simulator over a TCP socket
 from random import choice, randint
 from pixel import Pixel
 
-NUM_HEXES = 2
+NUM_HEXES = 1
 HEX_SIZE = 11    # Number of LEDs high/wide for each hex
 HEX_OFFSET = 5
 

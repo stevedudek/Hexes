@@ -122,8 +122,8 @@ class ChannelRunner(object):
 
         else:
             # One Channel just dumps the single channel
+            fract_channel1 = self.channels[0].get_show_intensity()  # 0.0-1.0
             for pixel in self.channels[0].hex_model.all_onscreen_pixels():
-                fract_channel1 = self.channels[0].get_show_intensity()  # 0.0-1.0
                 dimmed_interp_color = color.dim_color(pixel.interp_frame, fract_channel1)
                 if self.dmx_runner is not None:
                     self.dmx_runner.set(pixel, dimmed_interp_color)  # Queue up one pixel's DMX signal
